@@ -29,6 +29,7 @@ db.json
 *.log
 node_modules/
 public/
-.deploy*/
+.deploy_git
+.deploy_git/*
 .idea
 .idea/*
