@@ -1,6 +1,11 @@
 class:
   class_name: 友情链接
   link_list:
+    0:
+      name: 我的CSDN
+      link: https://blog.csdn.net/u010458765/
+      avatar: ../img/v.jpg
+      descr: Write Once, Bug Anywhere
     1:
       name: 王峰
       link: https://www.wangfeng.pro/
