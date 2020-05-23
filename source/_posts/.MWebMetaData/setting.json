@@ -1,0 +1,10 @@
+{
+  "name" : "_posts",
+  "fileExtension" : ".md",
+  "autoUploadInsertedImageKey" : "sm.ms (@xixincan)-https:\/\/sm.ms\/api\/v2\/upload",
+  "autoUploadInsertedImage" : true,
+  "folderType" : 10,
+  "mediaFloder" : "media",
+  "orderBy" : 0,
+  "newlinesToBR" : 0
+}

@@ -1,0 +1,23 @@
+class:
+  class_name: 友情链接
+  link_list:
+    1:
+      name: 王峰
+      link: https://www.wangfeng.pro/
+      avatar: https://file.wf2311.com/wf2311.png
+      descr: Java开发小伙纸
+    2:
+      name: 可乐不加冰
+      link: https://lucfzy.com/
+      avatar: https://www.lucfzy.com/img/avatar.png
+      descr: 生命不息，创作不止
+    3:
+      name: 码酱
+      link: http://luokangyuan.com/
+      avatar: http://image.luokangyuan.com/1_qq_27922023.jpg
+      descr: 我不是大佬，只是在追寻大佬的脚步
+    4:
+      name: 灰灰Blog
+      link: https://liuyueyi.github.io/hexblog/
+      avatar: https://liuyueyi.github.io/hexblog/images/avatar.jpg
+      descr: Java,Python,DBA, 主旨服务器，兼职全栈
