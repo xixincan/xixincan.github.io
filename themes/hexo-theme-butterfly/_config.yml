@@ -28,7 +28,7 @@ menu:
 # ---------------
 highlight_theme: light # default / darker / pale night / light / ocean
 highlight_copy: true #代碼複製按鈕
-highlight_lang: true #代碼語言顯示
+highlight_lang: false #代碼語言顯示
 highlight_shrink: false # true 全部代碼框不展開，需點擊 '>' 打開 / false 代碼框展開，有'>'點擊按鈕 | none 代碼框展開，不顯示 '>' 按鈕
 
 code_word_wrap: false
@@ -165,7 +165,7 @@ error_404:
 
 post_meta:
   page:
-    date_type: created # created or updated or both 主頁文章日期是創建日或者更新日或都顯示
+    date_type: both # created or updated or both 主頁文章日期是創建日或者更新日或都顯示
     categories: true # true or false 主頁是否顯示分類
     tags: true # true or false 主頁是否顯示標籤
   post:
@@ -305,7 +305,7 @@ facebook_comments:
 # ------------------------------------
 since: 2020
 
-footer_custom_text: Hi, 欢迎来到<a href='https://xixincan.github.io'>我的博客</a>!
+footer_custom_text: Hi, 欢迎来到<a href='https://xixincan.github.io'>Chronos</a>!
 
 footer_copyright:
   enable: true
@@ -447,7 +447,7 @@ canvas_ribbon_piao:
 # canvas_nest
 # https://github.com/hustcc/canvas-nest.js
 canvas_nest:
-  enable: false
+  enable: true
   color: '0,0,255' #color of lines, default: '0,0,0'; RGB values: (R,G,B).(note: use ',' to separate.)
   opacity: 0.7 # the opacity of line (0~1), default: 0.5.
   zIndex: -1 # z-index property of the background, default: -1.
@@ -486,7 +486,7 @@ display_mode: light
 
 # 美化頁面顯示
 beautify:
-  enable: false
+  enable: true
   field: post # site/post
   title-prefix-icon: '\f0c1'
   title-prefix-icon-color: '#F47466'
@@ -515,7 +515,7 @@ subtitle:
   # 打字效果
   effect: true
   # 循環或者只打字一次
-  loop: false
+  loop: true
   # source調用第三方服務
   # source: false 關閉調用
   # source: 1  調用搏天api的隨機語錄（簡體） https://api.btstu.cn/
@@ -550,7 +550,7 @@ aside:
     description:
   card_announcement:
     enable: true
-    content: 不积跬步，无以致千里。这里是我的个人博客，我会在在这记录一些点点滴滴知识 | 2020-05-20
+    content: 不积跬步，无以致千里。这里是我的个人博客，我把它命名为Chronos，我会在Chronos这记录一些点点滴滴知识 | 2020-05-20
   card_recent_post:
     enable: true
     limit: 5 # if set 0 will show all
@@ -625,7 +625,7 @@ darkmode:
 #--------------------------------------------
 # medium_zoom https://github.com/francoischalifour/medium-zoom
 medium_zoom:
-  enable: false
+  enable: true
 
 # fancybox http://fancyapps.com/fancybox/3/
 fancybox:

@@ -1,5 +1,5 @@
 ---
-title: jinfo工具详解
+title: JVM系列--jinfo工具详解
 date: 2020-05-21 16:31:30
 tags:
 - Java

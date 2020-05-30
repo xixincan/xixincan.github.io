@@ -11,7 +11,7 @@ keywords:
 cover: https://i.loli.net/2020/05/21/yscedjz713tY8hF.jpg
 ---
 ## 目标
-* 熟悉JVM参数优化步骤（套路嗨...）
+* 熟悉JVM参数优化步骤（...就是套路嗨...）
 * 重视系统的稳定性
 
 ## 回顾
