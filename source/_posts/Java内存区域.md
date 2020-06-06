@@ -5,6 +5,7 @@ tags:
 - Java
 - JVM
 - 内存
+- JVM系列
 categories: Java
 keywords: Java内存
 cover: https://i.loli.net/2020/05/21/lAy3M4kgtw7BzO8.jpg

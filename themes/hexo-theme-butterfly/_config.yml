@@ -536,7 +536,7 @@ fontawesome_v5:
   enable: false
 
 # 加載動畫 Loading Animation
-preloader: true
+preloader: false
 
 ####    側邊欄    ####
 #-------------------------------------

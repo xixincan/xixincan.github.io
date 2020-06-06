@@ -5,6 +5,7 @@ tags:
 - Java
 - JDK
 - JVM
+- JVM系列
 categories: Java
 keywords: jinfo
 cover: https://i.loli.net/2020/05/21/lAy3M4kgtw7BzO8.jpg
