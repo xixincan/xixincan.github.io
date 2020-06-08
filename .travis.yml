@@ -1,0 +1,30 @@
+language: node_js
+node_js: stable
+
+# S: Build Lifecycle
+install:
+  - npm install
+
+
+  #before_script:
+  # - npm install -g gulp
+
+script:
+  - hexo g
+
+after_script:
+  - cd ./public
+  - git init
+  - git config user.name "xixincan"
+  - git config user.email "xixincan@163.com"
+  - git add .
+  - git commit -m "Auto publish via Travis"
+  - git push --force --quiet "https://${chronos}@${GH_REF}" master:master
+# E: Build LifeCycle
+
+branches:
+  only:
+    - chronos
+env:
+  global:
+    - GH_REF: github.com/xixincan/xixincan.github.io.git
