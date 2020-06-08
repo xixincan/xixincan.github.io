@@ -18,7 +18,7 @@ after_script:
   - git config user.name "xixincan"
   - git config user.email "xixincan@163.com"
   - git add .
-  - git commit -m "Auto publish via Travis"
+  - git commit -m "Auto publish via Travis CI"
   - git push --force --quiet "https://${chronos}@${GH_REF}" master:master
 # E: Build LifeCycle
 
