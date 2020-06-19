@@ -6,7 +6,7 @@ tags:
 - MySQL
 - MySQL系列
 categories: MySQL 
-keywords: MySQL,索引,倒排索引,全文索引,B+Tree,B+树
+keywords: MySQL,索引,全文索引,B+Tree,B+树
 cover: https://i.loli.net/2020/06/07/UIlfGEs8iLVrhc4.png
 ---
 ## 前言
