@@ -7,7 +7,7 @@ tags:
 - MySQL系列
 categories: MySQL 
 keywords: MySQL,锁,加锁规则
-cover: https://static001.geekbang.org/resource/image/be/04/bef7889aea4e542f24747e0aba819e04.jpg
+cover: https://i.loli.net/2020/08/20/64HlxeIsjnfFDym.png
 ---
 这段时间工作有点忙没有继续更新，MySQL锁重新梳理了一下，前面的文章中整理了几种锁的概念，但是没有整理加锁的规则，尤其是间隙锁和Next-Key Lock，容易在判断锁等待的问题上犯错。所以这篇找来了几个案例，从案例分析加锁规则。在进入案例之前，先看下前提条件说明已经加锁规则的总结。
 
