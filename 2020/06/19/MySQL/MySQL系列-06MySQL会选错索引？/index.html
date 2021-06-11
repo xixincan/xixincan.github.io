@@ -1,0 +1,194 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MySQL系列--06MySQL会选错索引？ | 奚新灿的博客-Chronos</title><meta name="description" content="虽然前面已经详细整理了索引以及其相关的概念，但是索引对于我们来说，实在太常用到，而且时常会碰到SQL调优的场景。我们已经知道，MySQL里面一张表可以有多个索引，但是索引的选择却通常不是我们主动指定的，也就是说，具体使用不使用，使用哪个索引，由MySQL决定。当我知道MySQL有时也会选错索引导致执行速度很慢，我也很诧异，平常对索引的使用也没有太深追细节，所以，这篇整理我觉得也是很有必要的。探一探"><meta name="keywords" content="MySQL,索引"><meta name="author" content="奚新灿,xixincan@163.com"><meta name="copyright" content="奚新灿"><meta name="format-detection" content="telephone=no"><link rel="shortcut icon" href="/img/favicon.jpg"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="dns-prefetch" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="https://fonts.googleapis.com" crossorigin="crossorigin"/><link rel="dns-prefetch" href="https://fonts.googleapis.com"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="dns-prefetch" href="//busuanzi.ibruce.info"/><meta name="twitter:card" content="summary"><meta name="twitter:title" content="MySQL系列--06MySQL会选错索引？"><meta name="twitter:description" content="虽然前面已经详细整理了索引以及其相关的概念，但是索引对于我们来说，实在太常用到，而且时常会碰到SQL调优的场景。我们已经知道，MySQL里面一张表可以有多个索引，但是索引的选择却通常不是我们主动指定的，也就是说，具体使用不使用，使用哪个索引，由MySQL决定。当我知道MySQL有时也会选错索引导致执行速度很慢，我也很诧异，平常对索引的使用也没有太深追细节，所以，这篇整理我觉得也是很有必要的。探一探"><meta name="twitter:image" content="https://i.loli.net/2020/06/07/IJ6yCUvja8g9z7P.png"><meta property="og:type" content="article"><meta property="og:title" content="MySQL系列--06MySQL会选错索引？"><meta property="og:url" content="https://github.com/xixincan/xixincan.github.io/2020/06/19/MySQL/MySQL%E7%B3%BB%E5%88%97-06MySQL%E4%BC%9A%E9%80%89%E9%94%99%E7%B4%A2%E5%BC%95%EF%BC%9F/"><meta property="og:site_name" content="奚新灿的博客-Chronos"><meta property="og:description" content="虽然前面已经详细整理了索引以及其相关的概念，但是索引对于我们来说，实在太常用到，而且时常会碰到SQL调优的场景。我们已经知道，MySQL里面一张表可以有多个索引，但是索引的选择却通常不是我们主动指定的，也就是说，具体使用不使用，使用哪个索引，由MySQL决定。当我知道MySQL有时也会选错索引导致执行速度很慢，我也很诧异，平常对索引的使用也没有太深追细节，所以，这篇整理我觉得也是很有必要的。探一探"><meta property="og:image" content="https://i.loli.net/2020/06/07/IJ6yCUvja8g9z7P.png"><meta property="article:published_time" content="2020-06-19T07:06:47.000Z"><meta property="article:modified_time" content="2021-06-11T20:02:26.112Z"><script src="https://cdn.jsdelivr.net/npm/js-cookie/dist/js.cookie.min.js"></script><script>var autoChangeMode = '1'
+var t = Cookies.get("theme")
+if (autoChangeMode == '1'){
+  var isDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches
+  var isLightMode = window.matchMedia("(prefers-color-scheme: light)").matches
+  var isNotSpecified = window.matchMedia("(prefers-color-scheme: no-preference)").matches
+  var hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+  if (t === undefined){
+    if (isLightMode) activateLightMode()
+    else if (isDarkMode) activateDarkMode()
+    else if (isNotSpecified || hasNoSupport){
+      console.log('You specified no preference for a color scheme or your browser does not support it. I Schedule dark mode during night time.')
+      var now = new Date()
+      var hour = now.getHours()
+      var isNight = hour < 6 || hour >= 18
+      isNight ? activateDarkMode() : activateLightMode()
+  }
+  } else if (t == 'light') activateLightMode()
+  else activateDarkMode()
+
+} else if (autoChangeMode == '2'){
+  now = new Date();
+  hour = now.getHours();
+  isNight = hour < 6 || hour >= 18
+  if(t === undefined) isNight? activateDarkMode() : activateLightMode()
+  else if (t === 'light') activateLightMode()
+  else activateDarkMode() 
+} else {
+  if ( t == 'dark' ) activateDarkMode()
+  else if ( t == 'light') activateLightMode()
+}
+
+function activateDarkMode(){
+  document.documentElement.setAttribute('data-theme', 'dark')
+  if (document.querySelector('meta[name="theme-color"]') !== null){
+    document.querySelector('meta[name="theme-color"]').setAttribute('content','#000')
+  }
+}
+function activateLightMode(){
+  document.documentElement.setAttribute('data-theme', 'light')
+  if (document.querySelector('meta[name="theme-color"]') !== null){
+  document.querySelector('meta[name="theme-color"]').setAttribute('content','#fff')
+  }
+}</script><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@latest/css/font-awesome.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css"><link rel="canonical" href="https://github.com/xixincan/xixincan.github.io/2020/06/19/MySQL/MySQL%E7%B3%BB%E5%88%97-06MySQL%E4%BC%9A%E9%80%89%E9%94%99%E7%B4%A2%E5%BC%95%EF%BC%9F/"><link rel="prev" title="MySQL系列--07Explain详解" href="https://github.com/xixincan/xixincan.github.io/2020/06/24/MySQL/MySQL%E7%B3%BB%E5%88%97-07Explain%E8%AF%A6%E8%A7%A3/"><link rel="next" title="MySQL系列--05索引详解" href="https://github.com/xixincan/xixincan.github.io/2020/06/16/MySQL/MySQL%E7%B3%BB%E5%88%97-05%E7%B4%A2%E5%BC%95%E8%AF%A6%E8%A7%A3/"><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Titillium+Web"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容:${query}"}},
+  translate: {"defaultEncoding":2,"translateDelay":0,"cookieDomain":"https://xixincan.github.io/","msgToTraditionalChinese":"繁","msgToSimplifiedChinese":"简"},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  bookmark: {
+    message_prev: '按',
+    message_next: '键将本页加入书签'
+  },
+  runtime_unit: '天',
+  runtime: true,
+  copyright: {"languages":{"author":"作者: 奚新灿","link":"链接: ","source":"来源: 奚新灿的博客-Chronos","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  ClickShowText: undefined,
+  medium_zoom: true,
+  fancybox: true,
+  Snackbar: undefined,
+  baiduPush: false,
+  highlightCopy: true,
+  highlightLang: false,
+  highlightShrink: 'false',
+  isFontAwesomeV5: false,
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+  
+}</script><script>var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isSidebar: true  
+  }</script><noscript><style>
+#page-header {
+  opacity: 1
+}
+.justified-gallery img{
+  opacity: 1
+}
+</style></noscript><meta name="generator" content="Hexo 4.2.1"></head><body><div id="mobile-sidebar"><div id="menu_mask"></div><div id="mobile-sidebar-menus"><div class="mobile_author_icon"><img class="avatar-img" src="/img/v.jpg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="mobile_post_data"><div class="mobile_data_item is-center"><div class="mobile_data_link"><a href="/archives/"><div class="headline">文章</div><div class="length_num">22</div></a></div></div><div class="mobile_data_item is-center">      <div class="mobile_data_link"><a href="/tags/"><div class="headline">标签</div><div class="length_num">18</div></a></div></div><div class="mobile_data_item is-center">     <div class="mobile_data_link"><a href="/categories/"><div class="headline">分类</div><div class="length_num">6</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fa fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fa fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fa fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fa fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fa fa-heart"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fa fa-link"></i><span> 友情链接</span></a></div></div></div></div><i class="fa fa-arrow-right on" id="toggle-sidebar" aria-hidden="true">     </i><div id="sidebar"><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar">     </div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#优化器的逻辑"><span class="toc-number">1.</span> <span class="toc-text">优化器的逻辑</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#索引选择异常和处理"><span class="toc-number">2.</span> <span class="toc-text">索引选择异常和处理</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#force-index"><span class="toc-number">2.1.</span> <span class="toc-text">force index</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#优化SQL"><span class="toc-number">2.2.</span> <span class="toc-text">优化SQL</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#另起炉灶"><span class="toc-number">2.3.</span> <span class="toc-text">另起炉灶</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#小结"><span class="toc-number">3.</span> <span class="toc-text">小结</span></a></li></ol></div></div></div><div id="body-wrap"><div class="post-bg" id="nav" style="background-image: url(https://i.loli.net/2020/06/07/IJ6yCUvja8g9z7P.png)"><div id="page-header"><span class="pull_left" id="blog_name"><a class="blog_title" id="site-name" href="/">奚新灿的博客-Chronos</a></span><span class="pull_right menus"><div id="search_button"><a class="site-page social-icon search"><i class="fa fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fa fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fa fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fa fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fa fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fa fa-heart"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fa fa-link"></i><span> 友情链接</span></a></div></div><span class="toggle-menu close"><a class="site-page"><i class="fa fa-bars fa-fw" aria-hidden="true"></i></a></span></span></div><div id="post-info"><div id="post-title"><div class="posttitle">MySQL系列--06MySQL会选错索引？</div></div><div id="post-meta"><div class="meta-firstline"><time class="post-meta__date" title="发表于 2020-06-19 15:06:47"><i class="fa fa-calendar" aria-hidden="true"></i> 发表于 2020-06-19</time><span class="post-meta__categories"><span class="post-meta__separator">|</span><i class="fa fa-inbox post-meta__icon" aria-hidden="true"></i><a class="post-meta__categories" href="/categories/MySQL/">MySQL</a></span></div><div class="meta-secondline"> </div><div class="meta-thirdline"><span class="post-meta-pv-cv"><i class="fa fa-eye post-meta__icon" aria-hidden="true"> </i><span>阅读量:</span><span id="busuanzi_value_page_pv"></span></span><span class="post-meta-commentcount"><span class="post-meta__separator">|</span><i class="post-meta__icon fa fa-comment-o" aria-hidden="true"></i><span>评论数:</span><a href="/2020/06/19/MySQL/MySQL%E7%B3%BB%E5%88%97-06MySQL%E4%BC%9A%E9%80%89%E9%94%99%E7%B4%A2%E5%BC%95%EF%BC%9F/#post-comment" itemprop="discussionUrl"><span class="valine-comment-count comment-count" data-xid="/2020/06/19/MySQL/MySQL%E7%B3%BB%E5%88%97-06MySQL%E4%BC%9A%E9%80%89%E9%94%99%E7%B4%A2%E5%BC%95%EF%BC%9F/" itemprop="commentCount"></span></a></span></div></div></div></div><main class="layout_post" id="content-inner"><article id="post"><div class="post-content" id="article-container"><p>虽然前面已经详细整理了索引以及其相关的概念，但是索引对于我们来说，实在太常用到，而且时常会碰到SQL调优的场景。我们已经知道，MySQL里面一张表可以有多个索引，但是索引的选择却通常不是我们主动指定的，也就是说，具体使用不使用，使用哪个索引，由MySQL决定。当我知道MySQL有时也会选错索引导致执行速度很慢，我也很诧异，平常对索引的使用也没有太深追细节，所以，这篇整理我觉得也是很有必要的。探一探索引究竟是如何被选择，如果遇到选错了索引的情况，我们又该怎么处理。</p>
+<p>从一个例子说起，代入感会更加明显，同时也能更清晰的说明问题。先建一张简单表t，有主键id、a、b三个字段，并分别建立索引，并使用存储过程向表t插入10万行递增的记录：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> <span class="string">`t`</span> (</span><br><span class="line">  <span class="string">`id`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span>,</span><br><span class="line">  <span class="string">`a`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">DEFAULT</span> <span class="literal">NULL</span>,</span><br><span class="line">  <span class="string">`b`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">DEFAULT</span> <span class="literal">NULL</span>,</span><br><span class="line">  PRIMARY <span class="keyword">KEY</span> (<span class="string">`id`</span>),</span><br><span class="line">  <span class="keyword">KEY</span> <span class="string">`a`</span> (<span class="string">`a`</span>),</span><br><span class="line">  <span class="keyword">KEY</span> <span class="string">`b`</span> (<span class="string">`b`</span>)</span><br><span class="line">) <span class="keyword">ENGINE</span>=<span class="keyword">InnoDB</span>;</span><br></pre></td></tr></table></figure>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">delimiter ;;</span><br><span class="line"><span class="keyword">create</span> <span class="keyword">procedure</span> idata()</span><br><span class="line"><span class="keyword">begin</span></span><br><span class="line">  <span class="keyword">declare</span> i <span class="built_in">int</span>;</span><br><span class="line">  <span class="keyword">set</span> i=<span class="number">1</span>;</span><br><span class="line">  while(i&lt;=100000)do</span><br><span class="line">    <span class="keyword">insert</span> <span class="keyword">into</span> t <span class="keyword">values</span>(i, i, i);</span><br><span class="line">    <span class="keyword">set</span> i=i+<span class="number">1</span>;</span><br><span class="line">  <span class="keyword">end</span> <span class="keyword">while</span>;</span><br><span class="line"><span class="keyword">end</span>;;</span><br><span class="line">delimiter ;</span><br><span class="line"><span class="keyword">call</span> idata();</span><br></pre></td></tr></table></figure>
+<p>初始化完毕后，我们分析这样一条SQL：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> t <span class="keyword">where</span> a <span class="keyword">between</span> <span class="number">10000</span> <span class="keyword">and</span> <span class="number">20000</span>;</span><br></pre></td></tr></table></figure>
+<p>很简单，a上有索引，使用的就是索引a，这点毋庸置疑。下图是explain命令查看这条SQL的执行情况：<br><img src="https://static001.geekbang.org/resource/image/2c/e3/2cfce769551c6eac9bfbee0563d48fe3.png" alt=""><br>从上图来看确实符合预期，但是我们要搞点事情，让他变得复杂些。现在表t已经有了10万个数据了，再做如下的操作：</p>
+<table>
+<thead>
+<tr>
+<th align="center">事务A</th>
+<th align="center">事务B</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">start transaction with consistent snapshot;</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="center"></td>
+<td align="center">delete from t;</td>
+</tr>
+<tr>
+<td align="center"></td>
+<td align="center">call idata();</td>
+</tr>
+<tr>
+<td align="center"></td>
+<td align="center">explain select * from t where a between 10000 and 20000;</td>
+</tr>
+<tr>
+<td align="center">commit;</td>
+<td align="center"></td>
+</tr>
+</tbody></table>
+<p>这时候事务B中的查询语句就不会再选择索引a了。通过慢查询日志（slow log）查看一下具体执行情况。为了说明优化器选择的结果是否正确，增加一个对照：让优化器强制使用索引a来对比。下面的三条SQL语句，就是这个实验过程。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">set</span> long_query_time=<span class="number">0</span>;</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> t <span class="keyword">where</span> a <span class="keyword">between</span> <span class="number">10000</span> <span class="keyword">and</span> <span class="number">20000</span>;                <span class="comment">/*Q1*/</span></span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> t <span class="keyword">force</span> <span class="keyword">index</span>(a) <span class="keyword">where</span> a <span class="keyword">between</span> <span class="number">10000</span> <span class="keyword">and</span> <span class="number">20000</span>; <span class="comment">/*Q2*/</span></span><br></pre></td></tr></table></figure>
+<p>第一句，是将慢查询日志的阈值设置为0，表示这个线程接下来的语句都会被记录入慢查询日志中;<br>第二句，Q1是事务B原来的查询；<br>第三句，Q2是加了<code>force index(a)</code>让优化器强制使用索引a来和Q1执行情况对比。<br><img src="https://static001.geekbang.org/resource/image/7c/f6/7c58b9c71853b8bba1a8ad5e926de1f6.png" alt=""><br>可以看到，Q1扫描了10万行，显然是走了全表扫描，执行时间是40毫秒。Q2扫描了10001行，执行了21毫秒。也就是说，我们在没有使用<code>force index</code>的时候，MySQL用错了索引，导致了更长的执行时间。</p>
+<h3 id="优化器的逻辑"><a href="#优化器的逻辑" class="headerlink" title="优化器的逻辑"></a>优化器的逻辑</h3><p>选择索引是优化器的工作，而优化器选择索引的目的，是找到一个最优的执行方案，并用最小的代价去执行语句。扫描行数是影响执行代价的因素之一。扫描的行数越少，意味着访问磁盘数据的次数越少，消耗的CPU资源越少。当然，扫描行数并不是唯一的判断标准，优化器还会结合是否使用临时表、是否排序等因素进行综合判断。</p>
+<p>我们这个简单的查询语句并没有涉及到临时表和排序，所以MySQL选错索引肯定是在判断扫描行数的时候出问题了。那<strong>扫描行数是怎么判断的呢？</strong></p>
+<p>MySQL在真正开始执行语句之前，并不能精确地知道满足这个条件的记录有多少条，而只能根据统计信息来估算记录数。这个统计信息就是索引的“区分度”。显然，一个索引上不同的值越多，这个索引的区分度就越好。而一个索引上不同的值的个数，我们称之为“基数”（cardinality）。也就是说，这个基数越大，索引的区分度越好。我们可以使用<strong>show index</strong>方法，看到一个索引的基数。如下所示：<br><img src="https://static001.geekbang.org/resource/image/16/d4/16dbf8124ad529fec0066950446079d4.png" alt=""><br>那么，<strong>MySQL是怎样得到索引的基数的呢？</strong> – 采样统计。把整张表取出来一行行统计，虽然可以得到精确的结果，但是代价太高了，所以只能选择“采样统计”。</p>
+<p>采样统计的时候，InnoDB默认会选择N个数据页，统计这些页面上的不同值，得到一个平均值，然后乘以这个索引的页面数，就得到了这个索引的基数。而数据表是会持续更新的，索引统计信息也不会固定不变。所以，当变更的数据行数超过1/M的时候，会自动触发重新做一次索引统计。</p>
+<p>在MySQL中，有两种存储索引统计的方式，可以通过设置参数<code>innodb_stats_persistent</code>的值来选择：</p>
+<ul>
+<li>设置为on的时候，表示统计信息会持久化存储。这时，默认的N是20，M是10。</li>
+<li>设置为off的时候，表示统计信息只存储在内存中。这时，默认的N是8，M是16。</li>
+</ul>
+<p>由于是采样统计，所以不管N是20还是8，这个基数都是很容易不准的。但这还不是全部。从上图中看到，这次的索引统计值（cardinality列）虽然不够精确，但大体上还是差不多的，选错索引一定还有别的原因。</p>
+<p>其实索引统计只是一个输入，对于一个具体的语句来说，优化器还要判断，执行这个语句本身要扫描多少行。接下来，我们再一起看看优化器预估的，这两个语句的扫描行数是多少。<br><img src="https://static001.geekbang.org/resource/image/e2/89/e2bc5f120858391d4accff05573e1289.png" alt=""><br>其中，rows这个字段表示的是预计扫描行数，Q1的结果还是符合预期的，rows的值是104620；但是Q2的rows值是37116，偏差就大了。最开始的<code>explian</code>命令看到的rows是只有10001行，是这个偏差误导了优化器的判断。</p>
+<p>到这里，可能你的第一个疑问不是为什么不准，而是优化器为什么放着扫描37000行的执行计划不用，却选择了扫描行数是100000的执行计划呢？</p>
+<p>这是因为，如果使用索引a，每次从索引a上拿到一个值，都要回到主键索引上查出整行数据，这个代价优化器也要算进去的。而如果选择扫描10万行，是直接在主键索引上扫描的，没有额外的代价。优化器会估算这两个选择的代价，从结果看来，优化器认为直接扫描主键索引更快。当然，从执行时间看来，这个选择并不是最优的。</p>
+<p>所以MySQL选错索引，这件事儿还得归咎到没能准确地判断出扫描行数。既然是统计信息不对，那就修正。*<em>analyze table t *</em>命令，可以用来重新统计索引信息。我们来看一下执行效果。<br><img src="https://static001.geekbang.org/resource/image/20/9c/209e9d3514688a3bcabbb75e54e1e49c.png" alt=""><br>这回对了。所以在实践中，如果你发现<code>explain</code>的结果预估的rows值跟实际情况差距比较大，可以采用这个方法来处理。</p>
+<p>如果只是索引统计不准确，通过<code>analyze</code>命令可以解决很多问题，但是前面我们说了，优化器可不止是看扫描行数。依然是基于这个表t，我们看看另外一个语句：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> t <span class="keyword">where</span> (a <span class="keyword">between</span> <span class="number">1</span> <span class="keyword">and</span> <span class="number">1000</span>)  <span class="keyword">and</span> (b <span class="keyword">between</span> <span class="number">50000</span> <span class="keyword">and</span> <span class="number">100000</span>) <span class="keyword">order</span> <span class="keyword">by</span> b <span class="keyword">limit</span> <span class="number">1</span>;</span><br></pre></td></tr></table></figure>
+<p>从条件上看，这个查询没有符合条件的记录，因此会返回空集合。在开始执行这条语句之前，你可以先设想一下，如果你来选择索引，会选择哪一个呢？</p>
+<ul>
+<li>如果使用索引a进行查询，那么就是扫描索引a的前1000个值，然后取到对应的id，再到主键索引上去查出每一行，然后根据字段b来过滤。显然这样需要扫描1000行。</li>
+<li>如果使用索引b进行查询，那么就是扫描索引b的最后50001个值，与上面的执行过程相同，也是需要回到主键索引上取值再判断，所以需要扫描50001行。</li>
+</ul>
+<p>如果使用索引a的话，执行速度明显会快很多。那么，下面我们就再用eplain命令来看看到底是不是这样。<br><img src="https://static001.geekbang.org/resource/image/48/b8/483bcb1ef3bb902844e80d9cbdd73ab8.png" alt=""><br>可以看到，返回结果中key字段显示，这次优化器选择了索引b，而rows字段显示需要扫描的行数是50198。扫描行数的估计值依然不准确，MySQL又选错了索引。</p>
+<h3 id="索引选择异常和处理"><a href="#索引选择异常和处理" class="headerlink" title="索引选择异常和处理"></a>索引选择异常和处理</h3><p>其实大多数时候优化器都能找到正确的索引，但偶尔你还是会碰到我们上面举例的这两种情况。原本可以执行得很快的SQL语句，执行速度却比你预期的慢很多，应该怎么办呢？</p>
+<h4 id="force-index"><a href="#force-index" class="headerlink" title="force index"></a>force index</h4><p><strong>采用force index强行选择一个索引。</strong>MySQL会根据词法解析的结果分析出可能可以使用的索引作为候选项，然后在候选列表中依次判断每个索引需要扫描多少行。如果<code>force index</code>指定的索引在候选索引列表中，就直接选择这个索引，不再评估其他索引的执行代价。</p>
+<p>来看下上面SQL采用<code>force index</code>的效果：<br><img src="https://static001.geekbang.org/resource/image/95/54/9582401a6bed6cb8fd803c9555750b54.png" alt=""><br>可以看到，原本语句需要执行2.23秒，而当你使用<code>force index(a)</code>的时候，只用了0.05秒，比优化器的选择快了40多倍。也就是说，优化器没有选择正确的索引，<code>force index</code>起到了“矫正”的作用。</p>
+<p>但是这种方法是有明显缺点的，一来这么写不优美，二来如果索引改了名字，这个语句也得改。而且如果以后迁移到别的数据库的话，这个语法还可能会不兼容。</p>
+<blockquote>
+<p>相似的方法除了<code>force index</code>（强制）外，还有 <code>use index</code>（使用）和<code>ignore index</code>（忽略）。另外，不管是force还是use或者ignore，用法都一样，且后面必须要加上where条件。</p>
+</blockquote>
+<h4 id="优化SQL"><a href="#优化SQL" class="headerlink" title="优化SQL"></a>优化SQL</h4><p>既然优化器放弃了使用索引a，说明a还不够合适，所以第二种方法就是，我们可以<strong>考虑修改语句，引导MySQL使用我们期望的索引</strong>。</p>
+<p>比如，在这个例子里，显然把<code>order by b limit 1</code> 改成 <code>order by b,a limit 1</code> ，语义的逻辑是相同的。<br><img src="https://static001.geekbang.org/resource/image/14/94/14cd598e52a2b72dd334a42603e5b894.png" alt=""><br>之前优化器选择使用索引b，是因为它认为使用索引b可以避免排序（b本身是索引，已经是有序的了，如果选择索引b的话，不需要再做排序，只需要遍历），所以即使扫描行数多，也判定为代价更小。</p>
+<p>现在<code>order by b,a</code>这种写法，要求按照b,a排序，就意味着使用这两个索引都需要排序。因此，扫描行数成了影响决策的主要条件，于是此时优化器选了只需要扫描1000行的索引a。</p>
+<p><strong>但是这种修改并不通用</strong>。只是刚好在这个语句里面有<code>limit 1</code>，因此如果有满足条件的记录， <code>order by b limit 1</code>和<code>order by b,a limit 1</code>都会返回b是最小的那一行，逻辑上一致，才可以这么做。所以这种方法的缺点就是一来通用性低，二来很容易修改了原来的语义导致结果偏差。</p>
+<h4 id="另起炉灶"><a href="#另起炉灶" class="headerlink" title="另起炉灶"></a>另起炉灶</h4><p>第三种方法是，在有些场景下，我们可以<strong>新建一个更合适的索引</strong>，来提供给优化器做选择，<strong>或删掉误用的索引</strong>。这种方法也有缺点，情况太少见，找一个更合适的索引一般比较困难。 </p>
+<h3 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h3><p>本篇主要整理了索引统计的更新机制，并提到了优化器存在选错索引的可能性。</p>
+<p>对于由于索引统计信息不准确导致的问题，你可以用<code>analyze table</code>来解决。</p>
+<p>而对于其他优化器误判的情况，你可以在应用端用<code>force index</code>来强行指定索引，也可以通过修改语句来引导优化器，还可以通过增加或者删除索引来绕过这个问题。</p>
+</div><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:xixincan@163.com">奚新灿</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://github.com/xixincan/xixincan.github.io/2020/06/19/MySQL/MySQL%E7%B3%BB%E5%88%97-06MySQL%E4%BC%9A%E9%80%89%E9%94%99%E7%B4%A2%E5%BC%95%EF%BC%9F/">https://github.com/xixincan/xixincan.github.io/2020/06/19/MySQL/MySQL%E7%B3%BB%E5%88%97-06MySQL%E4%BC%9A%E9%80%89%E9%94%99%E7%B4%A2%E5%BC%95%EF%BC%9F/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://github.com/xixincan/xixincan.github.io" target="_blank">奚新灿的博客-Chronos</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/SQL/">SQL</a><a class="post-meta__tags" href="/tags/MySQL/">MySQL</a><a class="post-meta__tags" href="/tags/MySQL%E7%B3%BB%E5%88%97/">MySQL系列</a></div><div class="post_share"><div class="social-share" data-image="https://i.loli.net/2020/08/20/64HlxeIsjnfFDym.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css"/><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js"></script></div></div><div class="post-reward"><a class="reward-button button--primary button--animated"> <i class="fa fa-qrcode"></i> 打赏<div class="reward-main"><ul class="reward-all"><li class="reward-item"><img class="post-qr-code__img" src="/img/wechat.jpeg" alt="微信"/><div class="post-qr-code__desc">微信</div></li><li class="reward-item"><img class="post-qr-code__img" src="/img/alipay.jpeg" alt="支付宝"/><div class="post-qr-code__desc">支付宝</div></li></ul></div></a></div><nav class="pagination_post" id="pagination"><div class="prev-post pull_left"><a href="/2020/06/24/MySQL/MySQL%E7%B3%BB%E5%88%97-07Explain%E8%AF%A6%E8%A7%A3/"><img class="prev_cover" src="https://i.loli.net/2020/06/07/2quU1hGkY5QwHJt.png" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">MySQL系列--07Explain详解</div></div></a></div><div class="next-post pull_right"><a href="/2020/06/16/MySQL/MySQL%E7%B3%BB%E5%88%97-05%E7%B4%A2%E5%BC%95%E8%AF%A6%E8%A7%A3/"><img class="next_cover" src="https://i.loli.net/2020/06/07/UIlfGEs8iLVrhc4.png" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">MySQL系列--05索引详解</div></div></a></div></nav><div class="relatedPosts"><div class="relatedPosts_headline"><i class="fa fa-fw fa-thumbs-up" aria-hidden="true"></i><span> 相关推荐</span></div><div class="relatedPosts_list"><div class="relatedPosts_item"><a href="/2020/06/06/MySQL/MySQL系列-01查询语句的执行/" title="MySQL系列--01查询语句的执行"><img class="relatedPosts_cover" src="https://i.loli.net/2020/06/07/oYP4lZqSCrI87Od.png"><div class="relatedPosts_main is-center"><div class="relatedPosts_date"><i class="fa fa-calendar fa-fw" aria-hidden="true"></i> 2020-06-06</div><div class="relatedPosts_title">MySQL系列--01查询语句的执行</div></div></a></div><div class="relatedPosts_item"><a href="/2020/06/07/MySQL/MySQL系列-02更新语句的执行/" title="MySQL系列--02更新语句的执行"><img class="relatedPosts_cover" src="https://i.loli.net/2020/06/07/Onkho7mDQaN4Lw3.png"><div class="relatedPosts_main is-center"><div class="relatedPosts_date"><i class="fa fa-calendar fa-fw" aria-hidden="true"></i> 2020-06-07</div><div class="relatedPosts_title">MySQL系列--02更新语句的执行</div></div></a></div><div class="relatedPosts_item"><a href="/2020/06/09/MySQL/MySQL系列-03事务及隔离级别/" title="MySQL系列--03事务及隔离级别"><img class="relatedPosts_cover" src="https://i.loli.net/2020/06/07/X4Hy3FGuwRrPTMa.png"><div class="relatedPosts_main is-center"><div class="relatedPosts_date"><i class="fa fa-calendar fa-fw" aria-hidden="true"></i> 2020-06-09</div><div class="relatedPosts_title">MySQL系列--03事务及隔离级别</div></div></a></div><div class="relatedPosts_item"><a href="/2020/06/12/MySQL/MySQL系列-04锁机制详解/" title="MySQL系列--04锁机制详解"><img class="relatedPosts_cover" src="https://i.loli.net/2020/06/07/oHqT26jk1xnbKJ9.png"><div class="relatedPosts_main is-center"><div class="relatedPosts_date"><i class="fa fa-calendar fa-fw" aria-hidden="true"></i> 2020-06-12</div><div class="relatedPosts_title">MySQL系列--04锁机制详解</div></div></a></div><div class="relatedPosts_item"><a href="/2020/06/16/MySQL/MySQL系列-05索引详解/" title="MySQL系列--05索引详解"><img class="relatedPosts_cover" src="https://i.loli.net/2020/06/07/UIlfGEs8iLVrhc4.png"><div class="relatedPosts_main is-center"><div class="relatedPosts_date"><i class="fa fa-calendar fa-fw" aria-hidden="true"></i> 2020-06-16</div><div class="relatedPosts_title">MySQL系列--05索引详解</div></div></a></div><div class="relatedPosts_item"><a href="/2020/06/24/MySQL/MySQL系列-07Explain详解/" title="MySQL系列--07Explain详解"><img class="relatedPosts_cover" src="https://i.loli.net/2020/06/07/2quU1hGkY5QwHJt.png"><div class="relatedPosts_main is-center"><div class="relatedPosts_date"><i class="fa fa-calendar fa-fw" aria-hidden="true"></i> 2020-06-24</div><div class="relatedPosts_title">MySQL系列--07Explain详解</div></div></a></div></div><div class="clear_both"></div></div><hr><div id="post-comment"><div class="comment_headling"><i class="fa fa-comments fa-fw" aria-hidden="true"></i><span> 评论</span></div><div class="vcomment" id="vcomment"></div><script src="https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js"></script><script>var requestSetting = function (from,set) {
+  var from = from
+  var setting = set.split(',').filter(function(item){
+  return from.indexOf(item) > -1
+  });
+  setting = setting.length == 0 ? from :setting;
+  return setting
+}
+
+var guestInfo = requestSetting(['nick','mail','link'],'nick/mail/link')
+var requiredFields = requestSetting(['nick','mail','link'],'nick')
+
+window.valine = new Valine({
+  el:'#vcomment',
+  appId: 'jEPAIPxYjthHjPu5b3KdB6VB-gzGzoHsz',
+  appKey: 't7yb02rahA7PQDMrFvmfjs1E',
+  notify: false,
+  verify: false,
+  placeholder: '留下点什么...',
+  avatar: 'monsterid',
+  meta: guestInfo,
+  pageSize: '10',
+  lang: 'zh-CN',
+  recordIP: false,
+  serverURLs: '',
+  emojiCDN: '',
+  emojiMaps: "",
+  enableQQ: true //,
+  //requiredFields: requiredFields
+});</script></div></article></main><footer id="footer" data-type="color"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2021 By 奚新灿</div><div class="framework-info"><span>驱动 </span><a href="https://hexo.io" target="_blank" rel="noopener"><span>Hexo</span></a><span class="footer-separator">|</span><span>主题 </span><a href="https://github.com/jerryc127/hexo-theme-butterfly"><span>Butterfly</span></a></div><div class="footer_custom_text">Hi, 欢迎来到<a href='https://xixincan.github.io' target="_blank" rel="noopener">Chronos</a>!</div></div></footer></div><section class="rightside" id="rightside"><div id="rightside-config-hide"><i class="fa fa-book" id="readmode" title="阅读模式"></i><i class="fa fa-plus" id="font_plus" title="放大字体"></i><i class="fa fa-minus" id="font_minus" title="缩小字体"></i><a class="translate_chn_to_cht" id="translateLink" href="javascript:translatePage();" title="简繁转换" target="_self">繁</a><i class="darkmode fa fa-moon-o" id="darkmode" title="夜间模式"></i></div><div id="rightside-config-show"><div id="rightside_config" title="设置"><i class="fa fa-cog" aria-hidden="true"></i></div><a id="to_comment" href="#post-comment" title="直达评论"><i class="scroll_to_comment fa fa-comments">  </i></a><i class="fa fa-list-ul close" id="mobile-toc-button" title="目录" aria-hidden="true"></i><i class="fa fa-arrow-up" id="go-up" title="回到顶部" aria-hidden="true"></i></div></section><div class="search-dialog" id="local-search"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"><div id="local-hits"></div><div id="local-stats"><div class="local-search-stats__hr" id="hr"><span>由</span> <a href="https://github.com/wzpan/hexo-generator-search" style="color:#49B1F5;">hexo-generator-search</a>
+ <span>提供支持</span></div></div></div><span class="search-close-button"><i class="fa fa-times"></i></span></div><div class="search-mask"></div><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="/js/tw_cn.js"></script><script src="https://cdn.jsdelivr.net/npm/medium-zoom/dist/medium-zoom.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><script id="ribbon_piao" mobile="false" src="/js/third-party/piao.js"></script><script src="/js/third-party/activate-power-mode.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = false;
+document.body.addEventListener('input', POWERMODE);
+</script><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><script src="https://cdn.jsdelivr.net/npm/instant.page@latest/instantpage.min.js" type="module"></script><script src="/js/search/local-search.js"></script></body></html>

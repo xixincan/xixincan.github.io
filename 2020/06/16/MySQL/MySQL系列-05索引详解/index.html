@@ -1,0 +1,324 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MySQL系列--05索引详解 | 奚新灿的博客-Chronos</title><meta name="description" content="前言整理过了MySQL架构、日志系统、事务和锁机制，本篇的主角就是面试必问的索引了。索引的出现其实就是为了提高数据查询的效率，就像书的目录一样。在数据十分庞大的时候，索引可以大大加快查询的速度。这是因为使用索引后可以不用扫描全表来定位某行的数据，而是先通过索引表找到该行数据或对应的物理地址然后访问相应的数据。 语法回顾创建索引 创建表的同时创建索引  12345CREATE TABLE demo("><meta name="keywords" content="MySQL,索引,全文索引,B+Tree,B+树"><meta name="author" content="奚新灿,xixincan@163.com"><meta name="copyright" content="奚新灿"><meta name="format-detection" content="telephone=no"><link rel="shortcut icon" href="/img/favicon.jpg"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="dns-prefetch" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="https://fonts.googleapis.com" crossorigin="crossorigin"/><link rel="dns-prefetch" href="https://fonts.googleapis.com"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="dns-prefetch" href="//busuanzi.ibruce.info"/><meta name="twitter:card" content="summary"><meta name="twitter:title" content="MySQL系列--05索引详解"><meta name="twitter:description" content="前言整理过了MySQL架构、日志系统、事务和锁机制，本篇的主角就是面试必问的索引了。索引的出现其实就是为了提高数据查询的效率，就像书的目录一样。在数据十分庞大的时候，索引可以大大加快查询的速度。这是因为使用索引后可以不用扫描全表来定位某行的数据，而是先通过索引表找到该行数据或对应的物理地址然后访问相应的数据。 语法回顾创建索引 创建表的同时创建索引  12345CREATE TABLE demo("><meta name="twitter:image" content="https://i.loli.net/2020/06/07/UIlfGEs8iLVrhc4.png"><meta property="og:type" content="article"><meta property="og:title" content="MySQL系列--05索引详解"><meta property="og:url" content="https://github.com/xixincan/xixincan.github.io/2020/06/16/MySQL/MySQL%E7%B3%BB%E5%88%97-05%E7%B4%A2%E5%BC%95%E8%AF%A6%E8%A7%A3/"><meta property="og:site_name" content="奚新灿的博客-Chronos"><meta property="og:description" content="前言整理过了MySQL架构、日志系统、事务和锁机制，本篇的主角就是面试必问的索引了。索引的出现其实就是为了提高数据查询的效率，就像书的目录一样。在数据十分庞大的时候，索引可以大大加快查询的速度。这是因为使用索引后可以不用扫描全表来定位某行的数据，而是先通过索引表找到该行数据或对应的物理地址然后访问相应的数据。 语法回顾创建索引 创建表的同时创建索引  12345CREATE TABLE demo("><meta property="og:image" content="https://i.loli.net/2020/06/07/UIlfGEs8iLVrhc4.png"><meta property="article:published_time" content="2020-06-16T12:27:53.000Z"><meta property="article:modified_time" content="2021-06-11T20:02:26.112Z"><script src="https://cdn.jsdelivr.net/npm/js-cookie/dist/js.cookie.min.js"></script><script>var autoChangeMode = '1'
+var t = Cookies.get("theme")
+if (autoChangeMode == '1'){
+  var isDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches
+  var isLightMode = window.matchMedia("(prefers-color-scheme: light)").matches
+  var isNotSpecified = window.matchMedia("(prefers-color-scheme: no-preference)").matches
+  var hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+  if (t === undefined){
+    if (isLightMode) activateLightMode()
+    else if (isDarkMode) activateDarkMode()
+    else if (isNotSpecified || hasNoSupport){
+      console.log('You specified no preference for a color scheme or your browser does not support it. I Schedule dark mode during night time.')
+      var now = new Date()
+      var hour = now.getHours()
+      var isNight = hour < 6 || hour >= 18
+      isNight ? activateDarkMode() : activateLightMode()
+  }
+  } else if (t == 'light') activateLightMode()
+  else activateDarkMode()
+
+} else if (autoChangeMode == '2'){
+  now = new Date();
+  hour = now.getHours();
+  isNight = hour < 6 || hour >= 18
+  if(t === undefined) isNight? activateDarkMode() : activateLightMode()
+  else if (t === 'light') activateLightMode()
+  else activateDarkMode() 
+} else {
+  if ( t == 'dark' ) activateDarkMode()
+  else if ( t == 'light') activateLightMode()
+}
+
+function activateDarkMode(){
+  document.documentElement.setAttribute('data-theme', 'dark')
+  if (document.querySelector('meta[name="theme-color"]') !== null){
+    document.querySelector('meta[name="theme-color"]').setAttribute('content','#000')
+  }
+}
+function activateLightMode(){
+  document.documentElement.setAttribute('data-theme', 'light')
+  if (document.querySelector('meta[name="theme-color"]') !== null){
+  document.querySelector('meta[name="theme-color"]').setAttribute('content','#fff')
+  }
+}</script><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@latest/css/font-awesome.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css"><link rel="canonical" href="https://github.com/xixincan/xixincan.github.io/2020/06/16/MySQL/MySQL%E7%B3%BB%E5%88%97-05%E7%B4%A2%E5%BC%95%E8%AF%A6%E8%A7%A3/"><link rel="prev" title="MySQL系列--06MySQL会选错索引？" href="https://github.com/xixincan/xixincan.github.io/2020/06/19/MySQL/MySQL%E7%B3%BB%E5%88%97-06MySQL%E4%BC%9A%E9%80%89%E9%94%99%E7%B4%A2%E5%BC%95%EF%BC%9F/"><link rel="next" title="MySQL系列--04锁机制详解" href="https://github.com/xixincan/xixincan.github.io/2020/06/12/MySQL/MySQL%E7%B3%BB%E5%88%97-04%E9%94%81%E6%9C%BA%E5%88%B6%E8%AF%A6%E8%A7%A3/"><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Titillium+Web"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容:${query}"}},
+  translate: {"defaultEncoding":2,"translateDelay":0,"cookieDomain":"https://xixincan.github.io/","msgToTraditionalChinese":"繁","msgToSimplifiedChinese":"简"},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  bookmark: {
+    message_prev: '按',
+    message_next: '键将本页加入书签'
+  },
+  runtime_unit: '天',
+  runtime: true,
+  copyright: {"languages":{"author":"作者: 奚新灿","link":"链接: ","source":"来源: 奚新灿的博客-Chronos","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  ClickShowText: undefined,
+  medium_zoom: true,
+  fancybox: true,
+  Snackbar: undefined,
+  baiduPush: false,
+  highlightCopy: true,
+  highlightLang: false,
+  highlightShrink: 'false',
+  isFontAwesomeV5: false,
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+  
+}</script><script>var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isSidebar: true  
+  }</script><noscript><style>
+#page-header {
+  opacity: 1
+}
+.justified-gallery img{
+  opacity: 1
+}
+</style></noscript><meta name="generator" content="Hexo 4.2.1"></head><body><div id="mobile-sidebar"><div id="menu_mask"></div><div id="mobile-sidebar-menus"><div class="mobile_author_icon"><img class="avatar-img" src="/img/v.jpg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="mobile_post_data"><div class="mobile_data_item is-center"><div class="mobile_data_link"><a href="/archives/"><div class="headline">文章</div><div class="length_num">22</div></a></div></div><div class="mobile_data_item is-center">      <div class="mobile_data_link"><a href="/tags/"><div class="headline">标签</div><div class="length_num">18</div></a></div></div><div class="mobile_data_item is-center">     <div class="mobile_data_link"><a href="/categories/"><div class="headline">分类</div><div class="length_num">6</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fa fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fa fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fa fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fa fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fa fa-heart"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fa fa-link"></i><span> 友情链接</span></a></div></div></div></div><i class="fa fa-arrow-right on" id="toggle-sidebar" aria-hidden="true">     </i><div id="sidebar"><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar">     </div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#前言"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#语法回顾"><span class="toc-number">1.1.</span> <span class="toc-text">语法回顾</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#创建索引"><span class="toc-number">1.1.1.</span> <span class="toc-text">创建索引</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#删除索引"><span class="toc-number">1.1.2.</span> <span class="toc-text">删除索引</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#查看索引"><span class="toc-number">1.1.3.</span> <span class="toc-text">查看索引</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#优缺点"><span class="toc-number">1.2.</span> <span class="toc-text">优缺点</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#常见类型"><span class="toc-number">1.3.</span> <span class="toc-text">常见类型</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#实现原理"><span class="toc-number">2.</span> <span class="toc-text">实现原理</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#常见模型"><span class="toc-number">2.1.</span> <span class="toc-text">常见模型</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#哈希表"><span class="toc-number">2.1.1.</span> <span class="toc-text">哈希表</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#有序数组"><span class="toc-number">2.1.2.</span> <span class="toc-text">有序数组</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#搜索树"><span class="toc-number">2.1.3.</span> <span class="toc-text">搜索树</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#索引的实现"><span class="toc-number">2.2.</span> <span class="toc-text">索引的实现</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#B-Tree索引"><span class="toc-number">2.2.1.</span> <span class="toc-text">B-Tree索引</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#B-Tree索引-1"><span class="toc-number">2.2.2.</span> <span class="toc-text">B+Tree索引</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#B-Tree对比B-Tree的优点"><span class="toc-number">2.2.3.</span> <span class="toc-text">B+Tree对比B-Tree的优点</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#B-Tree索引的优化"><span class="toc-number">2.2.4.</span> <span class="toc-text">B+Tree索引的优化</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#存储引擎中的实现"><span class="toc-number">2.3.</span> <span class="toc-text">存储引擎中的实现</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#非聚簇索引"><span class="toc-number">2.3.1.</span> <span class="toc-text">非聚簇索引</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#聚簇索引"><span class="toc-number">2.3.2.</span> <span class="toc-text">聚簇索引</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#索引维护"><span class="toc-number">2.4.</span> <span class="toc-text">索引维护</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#相关概念"><span class="toc-number">2.5.</span> <span class="toc-text">相关概念</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#回表"><span class="toc-number">2.5.1.</span> <span class="toc-text">回表</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#覆盖索引"><span class="toc-number">2.5.2.</span> <span class="toc-text">覆盖索引</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#最左前缀原则"><span class="toc-number">2.5.3.</span> <span class="toc-text">最左前缀原则</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#索引下推"><span class="toc-number">2.5.4.</span> <span class="toc-text">索引下推</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#change-buffer"><span class="toc-number">2.5.5.</span> <span class="toc-text">change buffer</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#查询过程"><span class="toc-number">2.5.5.1.</span> <span class="toc-text">查询过程</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#更新过程"><span class="toc-number">2.5.5.2.</span> <span class="toc-text">更新过程</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#change-buffer使用场景"><span class="toc-number">2.5.5.3.</span> <span class="toc-text">change buffer使用场景</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#change-buffer-amp-amp-redo-log"><span class="toc-number">2.5.5.4.</span> <span class="toc-text">change buffer &amp;&amp; redo log</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#索引使用策略"><span class="toc-number">2.6.</span> <span class="toc-text">索引使用策略</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#索引失效"><span class="toc-number">2.7.</span> <span class="toc-text">索引失效</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#小结"><span class="toc-number">2.8.</span> <span class="toc-text">小结</span></a></li></ol></li></ol></div></div></div><div id="body-wrap"><div class="post-bg" id="nav" style="background-image: url(https://i.loli.net/2020/06/07/UIlfGEs8iLVrhc4.png)"><div id="page-header"><span class="pull_left" id="blog_name"><a class="blog_title" id="site-name" href="/">奚新灿的博客-Chronos</a></span><span class="pull_right menus"><div id="search_button"><a class="site-page social-icon search"><i class="fa fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fa fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fa fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fa fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fa fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fa fa-heart"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fa fa-link"></i><span> 友情链接</span></a></div></div><span class="toggle-menu close"><a class="site-page"><i class="fa fa-bars fa-fw" aria-hidden="true"></i></a></span></span></div><div id="post-info"><div id="post-title"><div class="posttitle">MySQL系列--05索引详解</div></div><div id="post-meta"><div class="meta-firstline"><time class="post-meta__date" title="发表于 2020-06-16 20:27:53"><i class="fa fa-calendar" aria-hidden="true"></i> 发表于 2020-06-16</time><span class="post-meta__categories"><span class="post-meta__separator">|</span><i class="fa fa-inbox post-meta__icon" aria-hidden="true"></i><a class="post-meta__categories" href="/categories/MySQL/">MySQL</a></span></div><div class="meta-secondline"> </div><div class="meta-thirdline"><span class="post-meta-pv-cv"><i class="fa fa-eye post-meta__icon" aria-hidden="true"> </i><span>阅读量:</span><span id="busuanzi_value_page_pv"></span></span><span class="post-meta-commentcount"><span class="post-meta__separator">|</span><i class="post-meta__icon fa fa-comment-o" aria-hidden="true"></i><span>评论数:</span><a href="/2020/06/16/MySQL/MySQL%E7%B3%BB%E5%88%97-05%E7%B4%A2%E5%BC%95%E8%AF%A6%E8%A7%A3/#post-comment" itemprop="discussionUrl"><span class="valine-comment-count comment-count" data-xid="/2020/06/16/MySQL/MySQL%E7%B3%BB%E5%88%97-05%E7%B4%A2%E5%BC%95%E8%AF%A6%E8%A7%A3/" itemprop="commentCount"></span></a></span></div></div></div></div><main class="layout_post" id="content-inner"><article id="post"><div class="post-content" id="article-container"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>整理过了MySQL架构、日志系统、事务和锁机制，本篇的主角就是面试必问的索引了。索引的出现其实就是为了提高数据查询的效率，就像书的目录一样。在数据十分庞大的时候，索引可以大大加快查询的速度。这是因为使用索引后可以不用扫描全表来定位某行的数据，而是先通过索引表找到该行数据或对应的物理地址然后访问相应的数据。</p>
+<h3 id="语法回顾"><a href="#语法回顾" class="headerlink" title="语法回顾"></a>语法回顾</h3><h4 id="创建索引"><a href="#创建索引" class="headerlink" title="创建索引"></a>创建索引</h4><ul>
+<li>创建表的同时创建索引</li>
+</ul>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> demo(  </span><br><span class="line">    <span class="keyword">ID</span> <span class="built_in">INT</span> <span class="keyword">NOT</span> <span class="literal">NULL</span>,   </span><br><span class="line">    username <span class="built_in">VARCHAR</span>(<span class="number">16</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span>,  </span><br><span class="line">    <span class="keyword">INDEX</span> [indexName] (username(<span class="keyword">length</span>))  </span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>向表中添加索引</li>
+</ul>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> demo <span class="keyword">ADD</span> [<span class="keyword">UNIQUE</span>] <span class="keyword">INDEX</span> index_name(column_name);</span><br></pre></td></tr></table></figure>
+<p>或者</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">INDEX</span> index_name <span class="keyword">ON</span> demo(column_name);</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>注意：索引需要占用磁盘空间，因此在创建索引时要考虑到磁盘空间是否足够；创建索引时需要对表加锁，因此实际操作中需要在业务空闲期间进行。</p>
+</blockquote>
+<h4 id="删除索引"><a href="#删除索引" class="headerlink" title="删除索引"></a>删除索引</h4><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">DROP</span> <span class="keyword">INDEX</span> my_index <span class="keyword">ON</span> demo；</span><br></pre></td></tr></table></figure>
+<p>或者</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> demo <span class="keyword">DROP</span> <span class="keyword">INDEX</span> index_name;</span><br></pre></td></tr></table></figure>
+
+<h4 id="查看索引"><a href="#查看索引" class="headerlink" title="查看索引"></a>查看索引</h4><ul>
+<li>查看表中的索引：</li>
+</ul>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SHOW</span> <span class="keyword">INDEX</span> <span class="keyword">FROM</span> tablename</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>查看查询语句中使用索引的情况</li>
+</ul>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">EXPLAIN</span> DQL</span><br></pre></td></tr></table></figure>
+
+<h3 id="优缺点"><a href="#优缺点" class="headerlink" title="优缺点"></a>优缺点</h3><ul>
+<li>优点<br>可以快速检索，减少I/O次数，加快检索速度；根据索引分组和排序，可以加快分组和排序。</li>
+<li>缺点<br>索引本身也是表，因此会占用存储空间，一般来说，索引表占用的空间是数据表的1.5倍；索引表的维护和创建需要时间成本，这个成本随着数据量增大而增大；构建索引会降低数据表的修改操作（删除，添加，修改）的效率，因为在修改数据表的同时还需要修改索引表。</li>
+</ul>
+<h3 id="常见类型"><a href="#常见类型" class="headerlink" title="常见类型"></a>常见类型</h3><ul>
+<li>主键索引<br>根据主键建立的索引，主键值不允许重复，非空；关键词*<em>PRIMARY KEY *</em></li>
+</ul>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> <span class="string">'table_name'</span> <span class="keyword">ADD</span> PRIMARY <span class="keyword">KEY</span> index_name(<span class="string">'col'</span>)；</span><br></pre></td></tr></table></figure>
+<ul>
+<li>唯一索引<br>索引列的值必须唯一，可以为空；关键词<strong>UNIQUE</strong></li>
+</ul>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> <span class="string">'table_name'</span> <span class="keyword">ADD</span> <span class="keyword">UNIQUE</span> index_name(<span class="string">'col'</span>)；</span><br></pre></td></tr></table></figure>
+<ul>
+<li>普通索引<br>没有任何限制；关键字<strong>INDEX</strong></li>
+</ul>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> <span class="string">'table_name'</span> <span class="keyword">ADD</span> <span class="keyword">INDEX</span> index_name(<span class="string">'col'</span>)；</span><br></pre></td></tr></table></figure>
+<ul>
+<li>组合索引<br>用多个列组合构建的索引</li>
+</ul>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> <span class="string">'table_name'</span> <span class="keyword">ADD</span> <span class="keyword">INDEX</span> index_name(<span class="string">'col1'</span>, <span class="string">'col2'</span> <span class="string">'col3'</span>);</span><br></pre></td></tr></table></figure>
+<p>遵循<strong>最左前缀</strong>原则，把最常用作为检索或排序的列放在最左边，依次递减，组合索引相当于建立了col1, col1col2, col1col2col3三个索引。</p>
+<p>在使用组合索引的时候可能因为列名长度过长为导致索引的key太大，导致效率降低，在允许的情况下，可以只取前几个字符作为索引，语法如下：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> <span class="string">'table_name'</span> <span class="keyword">ADD</span> <span class="keyword">INDEX</span> index_name(col1(<span class="number">4</span>), col2(<span class="number">3</span>));</span><br></pre></td></tr></table></figure>
+<ul>
+<li>全文索引<br>用大文本对象的列构建的索引；关键词<strong>FULLTEXT INDEX</strong>。关于全文索引，由于用得不多这里不多阐述，之前有在个人笔记上整理过: <a href="http://note.youdao.com/noteshare?id=efb08cc4f32b6969c552a9dce21cf241" target="_blank" rel="noopener">全文索引介绍传送门</a></li>
+</ul>
+<h2 id="实现原理"><a href="#实现原理" class="headerlink" title="实现原理"></a>实现原理</h2><p>索引是在存储引擎层实现的，MySQL支持诸多引擎，而各种存储引擎对索引的支持和实现也各不相同，因此也就有了索引模型的概念。</p>
+<h3 id="常见模型"><a href="#常见模型" class="headerlink" title="常见模型"></a>常见模型</h3><p>索引的出现是为了提高查询效率，归根结底，还是其数据结构带来的读写效率的增益，这里整理三种较为常见的数据结构：哈希表、有序数组和<strong>搜索树</strong>。</p>
+<h4 id="哈希表"><a href="#哈希表" class="headerlink" title="哈希表"></a>哈希表</h4><p>哈希表是一种健-值（key-value）存储数据结构，只需要输入待查找的key，就可以找到对应的value。哈希的思路很简单，把值放在数组里，用一个哈希函数把key换算成一个确定的位置，然后把value放在数组的这个位置。不可避免地，多个key经过hash换算出现同一个值的情况，处理这种情况一般是拉出一个链表来。</p>
+<p>对于哈希表应该非常熟悉了，也无须多做整理，直接上结论。MySQL中Memory引擎默认使用哈希索引，InnoDB不支持手动创建；但是InnoDB会自调优：如果觉得建立自适应哈希索引（Adaptive Hash Index, AHI）能提高查询效率，InoDB就会在自己的内存缓存区开启一块区域建立AHI以加速查询。</p>
+<p>我们知道哈希表对于一个给定key查询value的效率是非常之高的，但是缺点是，因为它不是有序的，所以做区间查询的速度是很慢的！因此，<strong>哈希表这种结构适用于只有等值查询的场景</strong>。</p>
+<h4 id="有序数组"><a href="#有序数组" class="headerlink" title="有序数组"></a>有序数组</h4><p>说到等值查询和范围查询，在这两个方面，有序数组的性能都非常优秀。由于数组中的数值是按顺序递增或者递减地存储的，在等值查询场景可以使用二分法快速得到；显然对于范围查询，同样只需线用二分法找出一个边界然后朝一个方向遍历直至另一个边界即可。</p>
+<p>如果仅仅看查询的效率，那么有序数组可以说就是最好的数据结构了。但是，在需要更新数据的时候就麻烦了，往数组中间插入或者删除一个数据，就必须得挪动后面的所有数据位置，维护成本过高。</p>
+<p>因此，<strong>有序数组索引只适用于静态数据存储引擎</strong>，比如你要保存的是某一时刻快照数据记录，或者类似2020年杭州市所有人口信息这种不会再更改的数据。</p>
+<h4 id="搜索树"><a href="#搜索树" class="headerlink" title="搜索树"></a>搜索树</h4><p>最经典结构的莫过于二叉搜索树了，二叉搜索树的特点是：每个节点的左儿子小于父节点，父节点小于右儿子。为了维护查找的复杂度O(log(N))，还需要保持这颗树是平衡二叉树。为了做这个保证，更新的时间复杂度也是O(log(N))。图示如下：<br><img src="https://i.loli.net/2020/06/17/i1mnGaKhLZw7vID.png" alt=""></p>
+<p>树有二叉也可以有多叉。多叉即每个节点有多个儿子，子节点之间的大小保证从左至右递增。二叉树是搜索效率最高的，但是实际上大多数据库存储并不是用二叉树。原因是索引不止存在内存中，还要写到磁盘上。可以想象一下一个100万节点的平衡二叉树，树高度为20。一次查询可能需要访问20个数据块，且为随机读。在HDD时代，磁盘随机读取一个数据块约10ms寻址时间，也就是说在这个二叉树下单独访问一个行可能需要20*10ms时间，这个查询是很慢的。</p>
+<p>因此，为了让一个查询尽量地少读磁盘，就必须让查询过程尽量少的访问数据块。那么就应该使用N叉树，这里N就取决于数据块的大小。以InnoDB中一个整型字段索引为例，N差不多为1024，当这棵树的高度为4时就可以存储1024^3 个值，这已经10+亿了。考虑到树根的数据块总是在内存中的，一个10亿行的表上一个整数字段的索引，查找一个值最多只需要访问3次磁盘。其实，树的第二层也有很大概率在内存中，那么访问磁盘的平均次数就更少了。</p>
+<blockquote>
+<p>N=1024是怎么估算出来的？<br>存储引擎的设计专家巧妙的利用了磁盘的存储结构。磁盘的最小存储单位是<strong>扇区</strong>（sector）；系统从磁盘中读取数据到内存是以<strong>磁盘块</strong>（block）为基本概念的，常是整数倍的sector；操作系统以<strong>页</strong>（page）为单位管理内存，一页（page）通常默认为4K。数据库中也有页的概念用于管理内存，其大小通常取操作系统页的整数倍。InnoDB存储引擎默认的每个page的大小为16KB，可以通过参数innodb_page_size将也的大小设置为4K、8K、16K，在MySQL中可以通过如下命令查看页的大小：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">show</span> <span class="keyword">variables</span> <span class="keyword">like</span> <span class="string">'innodb_page_size'</span>;</span><br></pre></td></tr></table></figure>
+<p>索引结构的节点被设计为一个页的大小–InnoDB为例即默认16KB，整型字段一般为4B（INT）或8B（BIGINT），指针类型一般为4B或8B，都按8B算，即一个page中大概可以存储16KB/(8B+8B)=1K个值，InnoDB使用B+树实现索引，所有数据皆在子节点上，因此一棵高度4的B+树子节点可维护1024^3 条记录。</p>
+</blockquote>
+<h3 id="索引的实现"><a href="#索引的实现" class="headerlink" title="索引的实现"></a>索引的实现</h3><p>前面已经提到InnoDB使用B+树（B+Tree）结构实现的索引，讲到B+Tree索引，我又不得不提一嘴B树索引（B-Tree），面试中确实容易问到哈！所以关于B-Tree索引我也简单整理了一下。</p>
+<h4 id="B-Tree索引"><a href="#B-Tree索引" class="headerlink" title="B-Tree索引"></a>B-Tree索引</h4><p>B-Tree是多路平衡搜索树，先看B-Tree的数据结构：假设树的阶为M，高度为h，那么B-Tree必须满足以下条件：</p>
+<ul>
+<li>每个节点最多有M个孩子，内部结点至少有ceil(M/2)个孩子</li>
+<li>叶子节点高度相同，为h</li>
+<li>非叶子节点由n个key和n+1个指针组成，相关间隔，关键字key的个数n满足ceil(M/2)-1 &lt;= n &lt;= M-1</li>
+<li>且关键字升序排序</li>
+<li>叶子节点指针都为null<br>非叶子节点的key都是[key, data]二元组，其中key表示作为索引的键值，data为键值所在行的数据<br><img src="https://i.loli.net/2020/06/17/If5GAj4OxCMhE6Q.png" alt=""><br>在B-Tree的结构下，就可以使用二分查找法查找，查找复杂度为h * log(n)；一般来说树的高度不高，因此B-Tree是一个非常高效的查找结构。</li>
+</ul>
+<h4 id="B-Tree索引-1"><a href="#B-Tree索引-1" class="headerlink" title="B+Tree索引"></a>B+Tree索引</h4><p>B+Tree是B-Tree的一个变种，同样M阶B+Tree的不同在于：</p>
+<ul>
+<li>B+Tree的非叶子节点不存储数据，只存储键值</li>
+<li>B+Tree的叶子节点没有指针，所有的键值都会出现在叶子节点上，且key存储的键值对应data数据的（物理地址|主键|行数据）</li>
+<li>B+Tree的每个非叶子节点由n个键值key和n个指针组成，n取值范围ceil(M/2) &lt;= n &lt;= M</li>
+</ul>
+<p><img src="https://i.loli.net/2020/06/17/kdMroneGua8B2Tt.png" alt=""></p>
+<h4 id="B-Tree对比B-Tree的优点"><a href="#B-Tree对比B-Tree的优点" class="headerlink" title="B+Tree对比B-Tree的优点"></a>B+Tree对比B-Tree的优点</h4><ul>
+<li>磁盘读写代价更低</li>
+</ul>
+<p>一般来说B+Tree比BTree更适合实现外存的索引结构，索引结构的节点被设计为一个数据库页的大小，利用外存的“预读取”原则，每次读取的时候，把整个节点的数据读取到内存中，然后在内存中查找，尽可能少的磁盘I/O，B+Tree的非叶节点中不存储data，就可以存储更多的key，每个节点中的key个数越多，那么树的高度越小，需要I/O的次数越少，因此一般来说B+Tree比B-Tree更快（不是绝对的）。</p>
+<ul>
+<li>查询速度更稳定</li>
+</ul>
+<p>由于B+Tree非叶子节点不存储数据（data），因此所有的数据都要查询至叶子节点，而叶子节点的高度都是相同的，因此所有数据的查询速度都是接近的。</p>
+<h4 id="B-Tree索引的优化"><a href="#B-Tree索引的优化" class="headerlink" title="B+Tree索引的优化"></a>B+Tree索引的优化</h4><p>很多存储引擎在B+Tree的基础上进行了优化，<strong>添加了指向相邻叶节点的指针</strong>，形成了带有顺序访问指针的B+Tree，这样做是为了<strong>提高区间查找的效率</strong>，只要找到第一个值那么就可以顺序的查找后面的值。</p>
+<h3 id="存储引擎中的实现"><a href="#存储引擎中的实现" class="headerlink" title="存储引擎中的实现"></a>存储引擎中的实现</h3><p>整理好了MySQL索引结构的实现原理，我们整理一下常见的两种存储引擎MyISAM和InnoDB中具体的实现。MyISAM和InnoDB中分别实现了<strong>非聚簇索引</strong>和<strong>聚簇索引</strong>。</p>
+<p>这两种索引下面详细解释，解释之前先预备几个概念：在索引的分类中整理过主键索引等其他一众索引，我们把主键索引称为“<strong>主索引</strong>”，其他的索引统称为“<strong>辅助索引</strong>”。可以看到主索引只能有一个，辅助索引可以有多个。</p>
+<h4 id="非聚簇索引"><a href="#非聚簇索引" class="headerlink" title="非聚簇索引"></a>非聚簇索引</h4><p>非聚簇索引的解释是：<strong>非聚簇索引顺序与数据物理排列顺序无关</strong>。</p>
+<p>MyISAM中使用的非聚簇索引，其主索引和辅助索引几乎是一样的，只是主索引不允许重复且不允许空值。他们的叶子节点的key都存储着指向键值对应的数据物理地址。如下图所示：<br><img src="https://i.loli.net/2020/06/17/1k5dSP8yATNiJcU.png" alt=""><br>从图中可以看出，<strong>非聚簇索引的数据表和索引表是分开存储的。</strong>非聚簇索引的数据是根据数据的插入顺序保存。因此非聚簇索引更适合单个数据的查询。插入顺序不受键值影响。</p>
+<h4 id="聚簇索引"><a href="#聚簇索引" class="headerlink" title="聚簇索引"></a>聚簇索引</h4><p>聚簇索引的解释是：<strong>聚簇索引的顺序就是数据的物理存储顺序</strong>。</p>
+<p>InnoDB中使用的聚簇索引，聚簇索引的<strong>主索引的叶子结点存储的是键值对应的数据本身</strong>，<strong>辅助索引的叶子结点存储的是键值对应的数据的主键键值</strong>。在InnoDB里，非主键索引也被称为二级索引（secondary index）。因此主键的值长度越小越好，类型越简单越好。<br><img src="https://i.loli.net/2020/06/17/SnDf549UVdAJtsF.png" alt=""><br>主键索引结构 – 数据和主键索引存在一起<br><img src="https://i.loli.net/2020/06/17/bsG3fOdxek21Zhz.png" alt=""><br>辅助索引结构 – 叶子节点存储主键索引</p>
+<p>从图中可以看出，二级索引查找数据时需要现在索引树中扫描找出主键，（如果需要）再从主键索引树中扫描一次找到相应的数据，这个过程就是<strong>回表</strong>。也就是说基于非主键索引的查询需要多扫描一棵索引树。因此，我们在应用中应该尽量使用主键查询。</p>
+<h3 id="索引维护"><a href="#索引维护" class="headerlink" title="索引维护"></a>索引维护</h3><p>索引的维护以聚簇索引来讲。聚簇索引的数据是根据主键的顺序保存。因此适合按主键索引的区间查找，可以有更少的磁盘I/O，加快查询速度。B+树为了维护索引有序性，在插入新值的时候需要做必要的维护。但是也是因为这个原因，聚簇索引的插入顺序最好按照主键单调的顺序插入，否则会频繁的引起<strong>页分裂</strong>，严重影响性能。</p>
+<blockquote>
+<p>页分裂：往B+树中插入数据时，会根据数据的值计算出插入位置，但并不是插入以后就结束了，如果所在的节点满了（对应的数据页满了），根据B+树算法会申请一个新的数据页，然后挪动部分数据过去。这个过程称为页分裂。这种情况下，性能自然会受影响。除此之外，页分裂还影响了数据页的利用率，即原本放在一个页中的数据现在分到了两个页中。<br>当然有分裂就有合并。当相邻两个节点由于删除了数据，两个页的利用率很低之后，根据B+树算法，会将节点（数据页）做合并。合并的过程，可以认为是分裂过程的逆过程。<br>有兴趣可以了解一下另一篇有关B+Tree算法的个人整理的笔记：<a href="http://note.youdao.com/noteshare?id=d7489e9f451067da0fe82f2dd024eb77" target="_blank" rel="noopener">B-Tree和B+Tree详解传送门</a>。</p>
+</blockquote>
+<p>在InnoDB中，如果只需要查找索引的列，就尽量不要加入其它的列，这样会提高查询效率。（<strong>覆盖索引</strong>）</p>
+<p>一些建表规范里面要求建表语句里一定要有自增主键。当然事无绝对，我们来分析一下哪些场景下应该使用自增主键，而哪些场景下不应该。</p>
+<p>自增主键是指自增列上定义的主键，在建表语句中一般是这么定义的： <code>NOT NULL PRIMARY KEY AUTO_INCREMENT</code>。插入新记录的时候可以不指定ID的值，系统会获取当前ID最大值加1作为下一条记录的ID值。</p>
+<p>也就是说，自增主键的插入数据模式，正符合了我们前面提到的递增插入的场景。每次插入一条新记录，都是追加操作，都不涉及到挪动其他记录，也不会触发叶子节点的分裂。</p>
+<p>而有业务逻辑的字段做主键，则往往不容易保证有序插入，这样写数据成本相对较高。</p>
+<p>除了考虑性能外，我们还可以从存储空间的角度来看。假设你的表中确实有一个唯一字段，比如字符串类型的身份证号，那应该用身份证号做主键，还是用自增字段做主键呢？</p>
+<p>由于每个非主键索引的叶子节点上都是主键的值。如果用身份证号做主键，那么每个二级索引的叶子节点占用约20个字节，而如果用整型做主键，则只要4个字节，如果是长整型（bigint）则是8个字节。<strong>显然，主键长度越小，普通索引的叶子节点就越小，普通索引占用的空间也就越小。</strong>所以，从性能和存储空间方面考量，自增主键往往是更合理的选择。</p>
+<p>有没有什么场景适合用业务字段直接做主键的呢？还是有的。比如，有些业务的场景需求是这样的：</p>
+<ol>
+<li>只有一个索引；</li>
+<li>该索引必须是唯一索引。</li>
+</ol>
+<p>没错，就是典型的KV场景。由于没有其他索引，所以也就不用考虑其他索引的叶子节点大小的问题。这时候我们就要优先考虑上一段提到的“尽量使用主键查询”原则，直接将这个索引设置为主键，可以避免每次查询需要搜索两棵树。</p>
+<h3 id="相关概念"><a href="#相关概念" class="headerlink" title="相关概念"></a>相关概念</h3><h4 id="回表"><a href="#回表" class="headerlink" title="回表"></a>回表</h4><p>回顾一下回表的概念，一句话概括就是使用二级索引（辅助索引、普通索引）查找到主键后回到主索引树搜索的过程就是回表。如果查询结果所需要的数据只在主键索引上有，就不得不回表。那么，有没有看你经过索引优化，避免回表过程呢？有，其实上面也提到了，就是<strong>覆盖索引</strong>。</p>
+<h4 id="覆盖索引"><a href="#覆盖索引" class="headerlink" title="覆盖索引"></a>覆盖索引</h4><p>如果在索引树（二级）直接可以提供我们要查询的数据，那就不需要回表。也就是说这个索引“覆盖”了查询需求，这就是覆盖索引。<strong>由于覆盖索引可以减少树的搜索次数，显著提升查询性能，所以使用覆盖索引是一个常用的性能优化手段</strong>。</p>
+<h4 id="最左前缀原则"><a href="#最左前缀原则" class="headerlink" title="最左前缀原则"></a>最左前缀原则</h4><p>组合索引中的一个原则，在一些联合条件搜索时，为了提高效率同时避免为每个字段都建立索引，可以考虑建立组合索引。建立组合索引后，如果其他的查询只用到了该组合中的一个或部分字段查询，就可以直接利用它的最左前缀来提高查询效率，而不用单独建立索引。</p>
+<p>用一个(name, age)这个联合索引来分析讨论，下图是(name, age)索引示意图：<br><img src="https://static001.geekbang.org/resource/image/89/70/89f74c631110cfbc83298ef27dcd6370.jpg" alt=""><br>可以看到，索引项是按照索引定义里面出现的字段顺序排序的。当需求是查询到所有名字是“张三”（<code>name=‘张三’</code>）的人时，可以快速定位到ID4，然后遍历得到所有结果。或者你要查询所有姓“张”（<code>name like ‘张%’</code>）的人，同样也能够用上这个联合索引。</p>
+<p>也就是说，不是索引的全部定义，只要满足最左前缀，就可以利用索引来加速检索。这个最左前缀可以时联合索引的最左N个字段，也可以时字符串索引的最左N个字符。</p>
+<p>到这，就需要注意一个问题：<strong>在建立联合索引的时候，如何安排索引内的字段顺序</strong>。一般是将<strong>索引的复用能力</strong>作为评估的标准。例如(a,b)索引建立后，一般情况下不需要单独建立a索引了。因此第一原则是：如果通过调整顺序可以少维护一个索引，那么这个顺序往往就是需要优先考虑采用的。其次的原则是空间问题，即优先使用较少的空间代价的索引。</p>
+<h4 id="索引下推"><a href="#索引下推" class="headerlink" title="索引下推"></a>索引下推</h4><p>说到满足最左前缀时可以用于在索引中定位记录，那不符合最左前缀的部分，会怎么样呢？为了说明这个问题，还是用上图(name,age)联合索引为例，需求：检索出姓张的且年龄是10岁的人。SQL如下:</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> usert <span class="keyword">where</span> <span class="keyword">name</span> <span class="keyword">like</span> <span class="string">'张%'</span> <span class="keyword">and</span> age=<span class="number">10</span>;</span><br></pre></td></tr></table></figure>
+<p>已知满足最左前缀，所以先用‘张’找到第一个满足条件的记录ID3，然后呢？然后当然是去判断age条件是否满足。但是，这里重点注意一下但是：</p>
+<p>在MySQL5.6之前，只能从ID3开始一个个回表，到主键索引树上找出数据行，再去比对age。而5.6版本引入的<strong>索引下推</strong>（index condition pushdown）优化，可以在索引遍历过程中，对索引中包含的字段优先做判断，直接过滤掉不满足条件的记录，减少回表次数。示意图如下：<br><img src="https://static001.geekbang.org/resource/image/b3/ac/b32aa8b1f75611e0759e52f5915539ac.jpg" alt=""><br>上图示意无索引下推流程（刻意隐去age字段表示InnoDB不会去比对age值）<br><img src="https://static001.geekbang.org/resource/image/76/1b/76e385f3df5a694cc4238c7b65acfe1b.jpg" alt=""><br>上图示意索引下推流程（减少了2次回表过程）</p>
+<h4 id="change-buffer"><a href="#change-buffer" class="headerlink" title="change buffer"></a>change buffer</h4><p>整理过了主键索引和辅助索引的区别，也介绍了联合索引以及联合索引顺序和索引下推，接下来，想象一下这个场景：一个用户系统，需要按照身份证号查找用户，业务中可以身份证号的唯一性，我们一定会在身份证号字段上加索引，身份证号字段比较大，首先不考虑做主键，那么是选择唯一索引还是普通索引呢？</p>
+<p>从逻辑上讲，业务已经保证了它的唯一性，无论选择唯一索引还是普通索引都是正确的。那么他们的差别只能是性能上的，毋庸置疑，普通索引性能更高，接下来就从查询和更新两个方面来一探究竟。假设有一张表t主键id，待定类型索引字段k：</p>
+<h5 id="查询过程"><a href="#查询过程" class="headerlink" title="查询过程"></a>查询过程</h5><p>假设执行查询的语句是<code>select id from t where k=1;</code>。这个语句在索引树上的查询过程，先从B+树根节点开始，搜索到叶子节点，然后可认为数据页内部用二分法查找记录。</p>
+<ul>
+<li>若k是普通索引，查找到满足条件的第一个记录后，需要查找下一个记录，直到碰到第一个不满足k=1条件的记录。</li>
+<li>若k是唯一索引，由于索引定义了唯一性，查找到第一个满足条件的记录后就会停止检索。</li>
+</ul>
+<p>那么这个不同带来的性能差距是多少呢？– 微乎其微。前面提到过，InnoDB的数据是按数据页为单位来读写的。也就是说，当需要读一条记录的时候，并不是将这个记录本身从磁盘中读出来，而是以页为单位，将其整体读入内存。所以说，当找到k=1的记录的时候，它所在的数据页都在内存里了，那么对于普通索引来说，只需要多一次内存查询判断。当然，如果k=1正好是这个数据页最后一个记录，那就要取下一个数据页，这样会稍微复杂一些。但是别忘了，这个概率也是微乎其微的，之前计算过一个页可以放近1K个key。因此，在计算平均性能差异时，仍可以认为这个操作成本对于CPU来说可以忽略不计。</p>
+<h5 id="更新过程"><a href="#更新过程" class="headerlink" title="更新过程"></a>更新过程</h5><p>查询影响微乎其微，那么就看看更新的性能差异。在说明这个问题前，必须先了解<strong>change buffer</strong>的概念。</p>
+<p>当需要更新一个数据页时，如果数据页恰好在内存中，那就直接更新，但是如果这个页还没有在内存中的话，在不影响数据一致性的前提下，InnoDB会将这些更新操作缓存在change buffer中，这样就不需要从磁盘中读入这个数据页了。在下次查询需要访问这个数据页的时候，将数据页读入内存，然后执行change buffer中于这个页有关的操作。通过这种方式就能保证这个数据逻辑的正确性。</p>
+<p>需要说明的是，虽然名字是change buffer，实际上他是可以持久化的数据，也会被写入磁盘上。将change buffer中的操作应用到原始数据页，得到最新结果的过程称为<strong>merge</strong>。除了访问这个数据页会触发merge外，系统会定期merge。数据库正常关闭的过程中也会触发merge。</p>
+<p>显然，如果能够将更新操作先记录在change buffer，减少磁盘IO读，语句的执行速度会得到明显的提升。而且，数据读入内存中是需要占用buffer pool的，所以这种方式还能避免占用内存，提高内存利用率。那么，<strong>什么条件下才能使用change buffer呢</strong>？</p>
+<p>对于唯一索引来说，所有的更新操作都要先判断这个操作是违反唯一性约束。比如需要插入一条k=2的数据，那就需要判断现在表中是否已经存在k=2的记录，而这必须要将数据页读入内存才能判断。如果已经读入了内存，那直接更新就可以了，没有必要使用change buffer了。</p>
+<p>因此，<strong>唯一索引的更新不能使用change buffer</strong>，因为他一定要读入内存去做唯一性校验。实际上，也只有普通索引能使用。</p>
+<blockquote>
+<p>change buffer用的是buffer pool里的内存，因此不能无限增大。可以通过参数innodb_change_buffer_max_size来动态设置，单位为百分比。</p>
+</blockquote>
+<p>change buffer的概念介绍完了，理解了change buffer的机制，回过头看下表t插入一条k=2的记录处理流程：</p>
+<ul>
+<li><p>情况1：目标数据页在存在中</p>
+<ul>
+<li><p>若k为唯一索引，找到k=2的目标位置，判断没有冲突，插入这个值，语句执行结束。</p>
+</li>
+<li><p>若k为普通索引，找到k=2的目标位置，插入这个值，语句执行结束。</p>
+<p>这样看来，两种索引对更新语句的性能影响，也仅仅是一个判断，只会耗费微笑CPU时间。但这不是真正关注的点。</p>
+</li>
+</ul>
+</li>
+<li><p>情况2：目标数据页不在存在中</p>
+<ul>
+<li>若k为唯一索引，找到目标节点，将目标节点所在数据页读入内存，找到k=2的目标位置，判断没有冲突，插入这个值，语句执行结束。</li>
+<li>若k为普通索引，则是将更新记录在change buffer中，语句执行就结束了。</li>
+</ul>
+</li>
+</ul>
+<p><strong>将数据从磁盘读入内存涉及随机IO的访问，是数据库里面成本最高的操作之一</strong>。change buffer因为减少了随机磁盘访问，所以对更新性能的提升是会很明显的。</p>
+<h5 id="change-buffer使用场景"><a href="#change-buffer使用场景" class="headerlink" title="change buffer使用场景"></a>change buffer使用场景</h5><p>已经知道了change buffer只限于用在普通索引的场景下，而不适用于唯一索引。那么，现在有一个问题就是：普通索引的所有场景，使用change buffer都可以起到加速作用吗？</p>
+<p>因为merge的时候是真正进行数据更新的时刻，而change buffer的主要目的就是将记录的变更动作缓存下来，所以在一个数据页做merge之前，change buffer记录的变更越多（也就是这个页面上要更新的次数越多），收益就越大。</p>
+<p>因此，对于写多读少的业务来说，页面在写完以后马上被访问到的概率比较小，此时change buffer的使用效果最好。这种业务模型常见的就是账单类、日志类的系统。</p>
+<p>反过来，假设一个业务的更新模式是写入之后马上会做查询，那么即使满足了条件，将更新先记录在change buffer，但之后由于马上要访问这个数据页，会立即触发merge过程。这样随机访问IO的次数不会减少，反而增加了change buffer的维护代价。所以，对于这种业务模式来说，change buffer反而起到了副作用。</p>
+<p>因此，如果对于所有的更新后面，都马上伴随着对这个记录的查询，那么你应该<strong>关闭change buffer</strong>。而在其他情况下，change buffer都能提升更新性能。普通索引和change buffer的配合使用，对于数据量大的表的更新优化还是很明显的。</p>
+<h5 id="change-buffer-amp-amp-redo-log"><a href="#change-buffer-amp-amp-redo-log" class="headerlink" title="change buffer &amp;&amp; redo log"></a>change buffer &amp;&amp; redo log</h5><p>理解了change buffer的原理，你可能会联想到redo log和WAL。我发现这两个容易混淆，他们的核心机制都是尽量减少随机磁盘IO，所以觉得有必要整理区分一下。<strong>redo log 主要节省的是随机写磁盘的IO消耗（转成顺序写），而change buffer主要节省的则是随机读磁盘的IO消耗</strong>。</p>
+<h3 id="索引使用策略"><a href="#索引使用策略" class="headerlink" title="索引使用策略"></a>索引使用策略</h3><p>什么时候使用索引？</p>
+<ul>
+<li>主键自动建立唯一索引</li>
+<li>经常作为查询条件（在where或者group by语句后面）的列要建立索引</li>
+<li>作为排序的列要建立索引</li>
+<li>查询中与其他表关联的字段，外键关系建立索引</li>
+<li>高并发情况下倾向于组合索引</li>
+<li>用于聚合函数的列可以建立索引，例如使用了max(column_1)或者count(column_1)时的column_1就需要建立索引</li>
+<li>尽量不要包括多列排序，如果一定要，最好为这队列构建组合索引</li>
+</ul>
+<p>什么时候不需要建立索引？</p>
+<ul>
+<li>经常增删改的列不要建立索引</li>
+<li>很多重复值的列</li>
+<li>小表不建议使用，没有意义</li>
+<li>列值为大文本内容，使用短索引 或 全文索引</li>
+</ul>
+<h3 id="索引失效"><a href="#索引失效" class="headerlink" title="索引失效"></a>索引失效</h3><ul>
+<li>在一个select语句中，索引只使用一次，如果在where中使用了，那么在order by中就不要用了</li>
+<li>LIKE语句中，’%word%’会使索引失效（解决方法–覆盖索引（亲测） 或 使用全文索引），但是’word%’有效</li>
+<li>在查询条件中使用IS NULL或者IS NOT NULL<strong>可能</strong>会导致索引失效。（亲测IS NOT NULL只有possible_keys, key为空，IS NULL暂未测出）</li>
+<li>在索引的列上使用表达式或者函数会使索引失效（亲测）</li>
+<li>字符串不加单引号会导致索引失效。（亲测，只有possible_keys, key为空）更准确的说是类型不一致会导致失效</li>
+<li>如果排序的字段使用了索引，那么select的字段也要是索引字段，否则索引失效。但是，如果排序的是主键索引则select * 不会导致索引失效</li>
+<li>在查询条件中使用OR连接多个条件会导致索引失效，除非OR链接的每个条件都加上索引，这时应该改为两次查询，然后用UNION ALL连接起来。(亲测，只有possible_keys, key为空)</li>
+<li>在查询条件中使用不等于，包括 &lt; 符号、&gt; 符号和 != 会导致索引失效。特别的是如果对主键索引使用!=则不会使索引失效，如果对主键索引或者整数类型的索引使用&lt;符号或者&gt;符号不会使索引失效</li>
+</ul>
+<h3 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h3><ul>
+<li>使用主索引的时候，更适合使用聚簇索引，因为聚簇索引只需要查找一次，而非聚簇索引在查到数据的地址后，还要进行一次I/O查找数据。</li>
+<li>聚簇索引中，基于非主键索引的查询需要多扫描一棵索引树（回表）。因此，我们在应用中应该尽量使用主键查询。</li>
+<li>聚簇辅助索引存储的是主键的键值，因此可以在数据行移动或者页分裂的时候降低成本，因为这时不用维护辅助索引。但是由于主索引存储的是数据本身，因此聚簇索引会占用更多的空间。</li>
+<li>聚簇索引在插入新数据的时候比非聚簇索引慢很多，因为插入新数据时需要检测主键是否重复，这需要遍历主索引的所有叶节点，而非聚簇索引的叶节点保存的是数据地址，占用空间少，因此分布集中，查询的时候I/O更少，但聚簇索引的主索引中存储的是数据本身，数据占用空间大，分布范围更大，可能占用好多的扇区，因此需要更多次I/O才能遍历完毕。</li>
+</ul>
+</div><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:xixincan@163.com">奚新灿</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://github.com/xixincan/xixincan.github.io/2020/06/16/MySQL/MySQL%E7%B3%BB%E5%88%97-05%E7%B4%A2%E5%BC%95%E8%AF%A6%E8%A7%A3/">https://github.com/xixincan/xixincan.github.io/2020/06/16/MySQL/MySQL%E7%B3%BB%E5%88%97-05%E7%B4%A2%E5%BC%95%E8%AF%A6%E8%A7%A3/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://github.com/xixincan/xixincan.github.io" target="_blank">奚新灿的博客-Chronos</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/SQL/">SQL</a><a class="post-meta__tags" href="/tags/MySQL/">MySQL</a><a class="post-meta__tags" href="/tags/MySQL%E7%B3%BB%E5%88%97/">MySQL系列</a></div><div class="post_share"><div class="social-share" data-image="https://i.loli.net/2020/08/20/64HlxeIsjnfFDym.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css"/><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js"></script></div></div><div class="post-reward"><a class="reward-button button--primary button--animated"> <i class="fa fa-qrcode"></i> 打赏<div class="reward-main"><ul class="reward-all"><li class="reward-item"><img class="post-qr-code__img" src="/img/wechat.jpeg" alt="微信"/><div class="post-qr-code__desc">微信</div></li><li class="reward-item"><img class="post-qr-code__img" src="/img/alipay.jpeg" alt="支付宝"/><div class="post-qr-code__desc">支付宝</div></li></ul></div></a></div><nav class="pagination_post" id="pagination"><div class="prev-post pull_left"><a href="/2020/06/19/MySQL/MySQL%E7%B3%BB%E5%88%97-06MySQL%E4%BC%9A%E9%80%89%E9%94%99%E7%B4%A2%E5%BC%95%EF%BC%9F/"><img class="prev_cover" src="https://i.loli.net/2020/06/07/IJ6yCUvja8g9z7P.png" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">MySQL系列--06MySQL会选错索引？</div></div></a></div><div class="next-post pull_right"><a href="/2020/06/12/MySQL/MySQL%E7%B3%BB%E5%88%97-04%E9%94%81%E6%9C%BA%E5%88%B6%E8%AF%A6%E8%A7%A3/"><img class="next_cover" src="https://i.loli.net/2020/06/07/oHqT26jk1xnbKJ9.png" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">MySQL系列--04锁机制详解</div></div></a></div></nav><div class="relatedPosts"><div class="relatedPosts_headline"><i class="fa fa-fw fa-thumbs-up" aria-hidden="true"></i><span> 相关推荐</span></div><div class="relatedPosts_list"><div class="relatedPosts_item"><a href="/2020/06/06/MySQL/MySQL系列-01查询语句的执行/" title="MySQL系列--01查询语句的执行"><img class="relatedPosts_cover" src="https://i.loli.net/2020/06/07/oYP4lZqSCrI87Od.png"><div class="relatedPosts_main is-center"><div class="relatedPosts_date"><i class="fa fa-calendar fa-fw" aria-hidden="true"></i> 2020-06-06</div><div class="relatedPosts_title">MySQL系列--01查询语句的执行</div></div></a></div><div class="relatedPosts_item"><a href="/2020/06/07/MySQL/MySQL系列-02更新语句的执行/" title="MySQL系列--02更新语句的执行"><img class="relatedPosts_cover" src="https://i.loli.net/2020/06/07/Onkho7mDQaN4Lw3.png"><div class="relatedPosts_main is-center"><div class="relatedPosts_date"><i class="fa fa-calendar fa-fw" aria-hidden="true"></i> 2020-06-07</div><div class="relatedPosts_title">MySQL系列--02更新语句的执行</div></div></a></div><div class="relatedPosts_item"><a href="/2020/06/09/MySQL/MySQL系列-03事务及隔离级别/" title="MySQL系列--03事务及隔离级别"><img class="relatedPosts_cover" src="https://i.loli.net/2020/06/07/X4Hy3FGuwRrPTMa.png"><div class="relatedPosts_main is-center"><div class="relatedPosts_date"><i class="fa fa-calendar fa-fw" aria-hidden="true"></i> 2020-06-09</div><div class="relatedPosts_title">MySQL系列--03事务及隔离级别</div></div></a></div><div class="relatedPosts_item"><a href="/2020/06/12/MySQL/MySQL系列-04锁机制详解/" title="MySQL系列--04锁机制详解"><img class="relatedPosts_cover" src="https://i.loli.net/2020/06/07/oHqT26jk1xnbKJ9.png"><div class="relatedPosts_main is-center"><div class="relatedPosts_date"><i class="fa fa-calendar fa-fw" aria-hidden="true"></i> 2020-06-12</div><div class="relatedPosts_title">MySQL系列--04锁机制详解</div></div></a></div><div class="relatedPosts_item"><a href="/2020/06/19/MySQL/MySQL系列-06MySQL会选错索引？/" title="MySQL系列--06MySQL会选错索引？"><img class="relatedPosts_cover" src="https://i.loli.net/2020/06/07/IJ6yCUvja8g9z7P.png"><div class="relatedPosts_main is-center"><div class="relatedPosts_date"><i class="fa fa-calendar fa-fw" aria-hidden="true"></i> 2020-06-19</div><div class="relatedPosts_title">MySQL系列--06MySQL会选错索引？</div></div></a></div><div class="relatedPosts_item"><a href="/2020/06/24/MySQL/MySQL系列-07Explain详解/" title="MySQL系列--07Explain详解"><img class="relatedPosts_cover" src="https://i.loli.net/2020/06/07/2quU1hGkY5QwHJt.png"><div class="relatedPosts_main is-center"><div class="relatedPosts_date"><i class="fa fa-calendar fa-fw" aria-hidden="true"></i> 2020-06-24</div><div class="relatedPosts_title">MySQL系列--07Explain详解</div></div></a></div></div><div class="clear_both"></div></div><hr><div id="post-comment"><div class="comment_headling"><i class="fa fa-comments fa-fw" aria-hidden="true"></i><span> 评论</span></div><div class="vcomment" id="vcomment"></div><script src="https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js"></script><script>var requestSetting = function (from,set) {
+  var from = from
+  var setting = set.split(',').filter(function(item){
+  return from.indexOf(item) > -1
+  });
+  setting = setting.length == 0 ? from :setting;
+  return setting
+}
+
+var guestInfo = requestSetting(['nick','mail','link'],'nick/mail/link')
+var requiredFields = requestSetting(['nick','mail','link'],'nick')
+
+window.valine = new Valine({
+  el:'#vcomment',
+  appId: 'jEPAIPxYjthHjPu5b3KdB6VB-gzGzoHsz',
+  appKey: 't7yb02rahA7PQDMrFvmfjs1E',
+  notify: false,
+  verify: false,
+  placeholder: '留下点什么...',
+  avatar: 'monsterid',
+  meta: guestInfo,
+  pageSize: '10',
+  lang: 'zh-CN',
+  recordIP: false,
+  serverURLs: '',
+  emojiCDN: '',
+  emojiMaps: "",
+  enableQQ: true //,
+  //requiredFields: requiredFields
+});</script></div></article></main><footer id="footer" data-type="color"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2021 By 奚新灿</div><div class="framework-info"><span>驱动 </span><a href="https://hexo.io" target="_blank" rel="noopener"><span>Hexo</span></a><span class="footer-separator">|</span><span>主题 </span><a href="https://github.com/jerryc127/hexo-theme-butterfly"><span>Butterfly</span></a></div><div class="footer_custom_text">Hi, 欢迎来到<a href='https://xixincan.github.io' target="_blank" rel="noopener">Chronos</a>!</div></div></footer></div><section class="rightside" id="rightside"><div id="rightside-config-hide"><i class="fa fa-book" id="readmode" title="阅读模式"></i><i class="fa fa-plus" id="font_plus" title="放大字体"></i><i class="fa fa-minus" id="font_minus" title="缩小字体"></i><a class="translate_chn_to_cht" id="translateLink" href="javascript:translatePage();" title="简繁转换" target="_self">繁</a><i class="darkmode fa fa-moon-o" id="darkmode" title="夜间模式"></i></div><div id="rightside-config-show"><div id="rightside_config" title="设置"><i class="fa fa-cog" aria-hidden="true"></i></div><a id="to_comment" href="#post-comment" title="直达评论"><i class="scroll_to_comment fa fa-comments">  </i></a><i class="fa fa-list-ul close" id="mobile-toc-button" title="目录" aria-hidden="true"></i><i class="fa fa-arrow-up" id="go-up" title="回到顶部" aria-hidden="true"></i></div></section><div class="search-dialog" id="local-search"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"><div id="local-hits"></div><div id="local-stats"><div class="local-search-stats__hr" id="hr"><span>由</span> <a href="https://github.com/wzpan/hexo-generator-search" style="color:#49B1F5;">hexo-generator-search</a>
+ <span>提供支持</span></div></div></div><span class="search-close-button"><i class="fa fa-times"></i></span></div><div class="search-mask"></div><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="/js/tw_cn.js"></script><script src="https://cdn.jsdelivr.net/npm/medium-zoom/dist/medium-zoom.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><script id="ribbon_piao" mobile="false" src="/js/third-party/piao.js"></script><script src="/js/third-party/activate-power-mode.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = false;
+document.body.addEventListener('input', POWERMODE);
+</script><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><script src="https://cdn.jsdelivr.net/npm/instant.page@latest/instantpage.min.js" type="module"></script><script src="/js/search/local-search.js"></script></body></html>
